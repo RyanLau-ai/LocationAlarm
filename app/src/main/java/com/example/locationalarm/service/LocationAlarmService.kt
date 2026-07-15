@@ -1,6 +1,5 @@
 package com.example.locationalarm.service
 
-import android.Manifest
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
@@ -8,19 +7,21 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
-import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ServiceCompat
+import com.amap.api.location.AMapLocation
+import com.amap.api.location.AMapLocationClient
+import com.amap.api.location.AMapLocationClientOption
+import com.amap.api.location.AMapLocationListener
 import com.example.locationalarm.LocationAlarmApp
 import com.example.locationalarm.data.Alarm
 import com.example.locationalarm.data.AlarmHistory
-import com.google.android.gms.location.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * 位置闹钟前台服务
+ * 位置闹钟前台服务（高德定位版）
  *
  * 职责：
  * 1. 作为前台服务持续运行，保持定位活跃
@@ -42,10 +43,8 @@ class LocationAlarmService : Service() {
         const val ACTION_START = "com.example.locationalarm.START_SERVICE"
         const val ACTION_STOP = "com.example.locationalarm.STOP_SERVICE"
 
-        // 定位更新间隔（毫秒）
-        // 使用 30 秒平衡电量与响应速度；可通过 Geofence 优化，但此处用持续定位更可靠
+        // 定位间隔（毫秒）：30 秒
         private const val LOCATION_UPDATE_INTERVAL = 30_000L
-        private const val LOCATION_UPDATE_FASTEST_INTERVAL = 15_000L
 
         /**
          * 服务是否正在运行的全局标志，供 UI 层检查
@@ -53,24 +52,14 @@ class LocationAlarmService : Service() {
         val isRunning = MutableStateFlow(false)
     }
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationCallback: LocationCallback
+    private var locationClient: AMapLocationClient? = null
     private lateinit var notificationHelper: NotificationHelper
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationHelper = NotificationHelper(this)
-
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                result.lastLocation?.let { location ->
-                    checkAlarms(location)
-                }
-            }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -87,7 +76,7 @@ class LocationAlarmService : Service() {
     }
 
     /**
-     * 启动前台服务并开始定位监听
+     * 启动前台服务并开始高德定位监听
      */
     private fun startLocationMonitoring() {
         // 启动前台服务通知
@@ -108,35 +97,47 @@ class LocationAlarmService : Service() {
             return
         }
 
-        // 构建定位请求
-        val locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            LOCATION_UPDATE_INTERVAL
-        ).apply {
-            setMinUpdateIntervalMillis(LOCATION_UPDATE_FASTEST_INTERVAL)
-            setWaitForAccurateLocation(false)
-        }.build()
-
         try {
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
-            Log.i(TAG, "位置监听已启动")
-        } catch (e: SecurityException) {
-            Log.e(TAG, "定位权限被拒绝", e)
-            stopSelfSafely()
-        }
+            // 初始化高德定位客户端
+            locationClient = AMapLocationClient(applicationContext)
 
-        // 同时立即请求一次位置
-        try {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location ->
-                    location?.let { checkAlarms(it) }
+            // 配置定位参数
+            val option = AMapLocationClientOption().apply {
+                // 定位模式：高精度（GPS + 网络）
+                locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
+                // 定位间隔：30 秒
+                interval = LOCATION_UPDATE_INTERVAL
+                // 返回地址描述
+                isNeedAddress = true
+                // 缓存定位
+                isLocationCacheEnable = true
+                // 单次定位设为 false（持续定位）
+                isOnceLocation = false
+            }
+
+            locationClient?.setLocationOption(option)
+            locationClient?.setLocationListener { aMapLocation ->
+                if (aMapLocation != null && aMapLocation.errorCode == 0) {
+                    // 定位成功，转换为标准 Location 对象
+                    val location = Location("amap").apply {
+                        latitude = aMapLocation.latitude
+                        longitude = aMapLocation.longitude
+                        accuracy = aMapLocation.accuracy
+                        time = aMapLocation.time
+                    }
+                    checkAlarms(location)
+                } else {
+                    Log.w(TAG, "高德定位失败: errorCode=${aMapLocation?.errorCode}, errorInfo=${aMapLocation?.errorInfo}")
                 }
-        } catch (e: SecurityException) {
-            // ignore
+            }
+
+            // 启动定位
+            locationClient?.startLocation()
+            Log.i(TAG, "高德位置监听已启动")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "高德定位初始化失败", e)
+            stopSelfSafely()
         }
     }
 
@@ -169,7 +170,7 @@ class LocationAlarmService : Service() {
                 } else {
                     // 不在范围内
                     if (alarm.triggered) {
-                        // 之前已触发，现在离开了范围 → 重置触发状态，允许再次触发
+                        // 之前已触发，现在离开了范围 → 重置触发状态
                         repository.setTriggered(alarm.id, false)
                         notificationHelper.cancelAlarmNotification(alarm.id)
                     }
@@ -226,17 +227,17 @@ class LocationAlarmService : Service() {
 
     private fun hasLocationPermission(): Boolean {
         return ActivityCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_FINE_LOCATION
+            this, android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED ||
         ActivityCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_COARSE_LOCATION
+            this, android.Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun stopSelfSafely() {
-        if (this::fusedLocationClient.isInitialized && this::locationCallback.isInitialized) {
-            fusedLocationClient.removeLocationUpdates(locationCallback)
-        }
+        locationClient?.stopLocation()
+        locationClient?.onDestroy()
+        locationClient = null
         isRunning.value = false
         serviceScope.cancel()
         stopForeground(STOP_FOREGROUND_REMOVE)

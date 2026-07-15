@@ -27,6 +27,13 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --no-daemon
 
+      - name: Print Debug Signing SHA1
+        run: |
+          echo "=== Debug Keystore SHA1 ==="
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep "SHA1" || echo "SHA1 not found"
+          echo "=== Package Name ==="
+          echo "com.example.locationalarm"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
