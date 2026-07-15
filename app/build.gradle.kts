@@ -61,13 +61,13 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     // 高德定位 SDK（替代 Google Play Services Location）
-    implementation("com.amap.api:location:6.4.9")
+    implementation("com.amap.api:location:6.3.0")
 
     // 高德搜索 SDK（地理编码：地址转坐标、逆地理编码）
-    implementation("com.amap.api:search:9.7.5")
+    implementation("com.amap.api:search:9.5.0")
 
     // 高德 3D 地图 SDK（地图选点）
-    implementation("com.amap.api:3dmap:9.8.2")
+    implementation("com.amap.api:3dmap:9.6.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

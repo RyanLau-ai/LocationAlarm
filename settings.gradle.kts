@@ -10,8 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 高德 Maven 仓库
-        maven { url = uri("https://maven.aliyun.com/nexus/content/repositories/releases") }
+        // 高德 Maven 仓库（阿里云 jcenter 镜像）
+        maven { url = uri("https://maven.aliyun.com/repository/jcenter/") }
     }
 }
 

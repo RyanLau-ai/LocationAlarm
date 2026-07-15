@@ -38,15 +38,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LocationAlarm">
 
-        <activity
-            android:name=".ui.MainActivity"
-            android:exported="true"
-        android:theme="@style/Theme.LocationAlarm">
-
-        <!-- 高德定位 Key -->
+        <!-- 高德 API Key -->
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="04ea2abcb63f9f3b233175df7eb27e29" />
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LocationAlarm">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
