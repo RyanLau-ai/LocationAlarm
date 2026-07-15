@@ -49,7 +49,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            aMap.myLocation.isMyLocationEnabled = true
+            aMap.isMyLocationEnabled = true
         }
     }
 
@@ -89,7 +89,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         // 请求定位权限
         if (hasLocationPermission()) {
-            aMap.myLocation.isMyLocationEnabled = true
+            aMap.isMyLocationEnabled = true
         } else {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
@@ -133,7 +133,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         // 正向地理编码回调（地址 → 坐标）
         geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
-            override fun onGeocodeResult(result: GeocodeResult?, rCode: Int) {
+            override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {
                 val addressList = result?.geocodeAddressList
                 if (addressList.isNullOrEmpty()) {
                     binding.tvSearchResult.text = "未找到该地址，请尝试更详细的关键词"
@@ -162,12 +162,12 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onRegeocodeResult(result: RegeocodeResult?, rCode: Int) {
+            override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
                 val addr: RegeocodeAddress? = result?.regeocodeAddress
                 if (addr == null) {
                     selectedAddress = "纬度 ${"%.6f".format(selectedLatitude)}, 经度 ${"%.6f".format(selectedLongitude)}"
                 } else {
-                    selectedAddress = addr.formatAddress ?: addr.description ?: "未知地址"
+                    selectedAddress = addr.formatAddress ?: addr.province + addr.city + addr.district
                 }
 
                 binding.tvSearchResult.text = buildString {
@@ -191,9 +191,9 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         binding.fabMyLocation.setOnClickListener {
             // 回到我的位置 — 使用高德定位
-            aMap.myLocation.isMyLocationEnabled = true
+            aMap.isMyLocationEnabled = true
             // 移动到定位点
-            val myLoc = aMap.myLocation.location
+            val myLoc = aMap.myLocation
             if (myLoc != null) {
                 aMap.animateCamera(
                     CameraUpdateFactory.newLatLngZoom(
