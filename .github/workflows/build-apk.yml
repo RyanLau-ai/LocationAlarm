@@ -29,8 +29,8 @@ jobs:
 
       - name: Print Debug Signing SHA1
         run: |
-          echo "=== Debug Keystore SHA1 ==="
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep "SHA1" || echo "SHA1 not found"
+          echo "=== Debug Keystore Info ==="
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>&1 || echo "keytool failed"
           echo "=== Package Name ==="
           echo "com.example.locationalarm"
 
