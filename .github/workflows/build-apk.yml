@@ -29,8 +29,18 @@ jobs:
 
       - name: Print Debug Signing SHA1
         run: |
-          echo "=== Debug Keystore Info ==="
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>&1 || echo "keytool failed"
+          echo "=== Searching for debug.keystore ==="
+          find ~ -name "debug.keystore" 2>/dev/null || true
+          find /home/runner -name "debug.keystore" 2>/dev/null || true
+          KS=$(find /home/runner -name "debug.keystore" 2>/dev/null | head -1)
+          if [ -n "$KS" ]; then
+            echo "Found at: $KS"
+            keytool -list -v -keystore "$KS" -alias androiddebugkey -storepass android -keypass android 2>&1
+          else
+            echo "debug.keystore not found, generating one..."
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+            keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>&1
+          fi
           echo "=== Package Name ==="
           echo "com.example.locationalarm"
 
