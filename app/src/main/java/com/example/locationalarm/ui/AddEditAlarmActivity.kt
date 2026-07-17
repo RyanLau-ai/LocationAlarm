@@ -3,7 +3,11 @@ package com.example.locationalarm.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -23,10 +27,14 @@ import com.amap.api.services.geocoder.GeocodeSearch
 import com.amap.api.services.geocoder.RegeocodeAddress
 import com.amap.api.services.geocoder.RegeocodeQuery
 import com.amap.api.services.geocoder.RegeocodeResult
+import com.amap.api.services.poisearch.PoiResult
+import com.amap.api.services.poisearch.PoiSearch
 import com.example.locationalarm.LocationAlarmApp
 import com.example.locationalarm.data.Alarm
 import com.example.locationalarm.databinding.ActivityAddEditAlarmBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -39,6 +47,11 @@ class AddEditAlarmActivity : AppCompatActivity() {
     private lateinit var aMap: AMap
     private lateinit var geocodeSearch: GeocodeSearch
     private var currentMarker: Marker? = null
+
+    // POI 联想搜索
+    private var poiSearchJob: Job? = null
+    private val poiSuggestions = mutableListOf<PoiItem>()
+    private lateinit var suggestionAdapter: ArrayAdapter<String>
 
     // 已选位置
     private var selectedLatitude: Double = 0.0
@@ -63,6 +76,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         initMap(savedInstanceState)
         initGeocodeSearch()
+        initPoiSuggestion()
         setupClickListeners()
 
         if (editingAlarmId != -1L) {
@@ -179,6 +193,100 @@ class AddEditAlarmActivity : AppCompatActivity() {
         })
     }
 
+    // ---- POI 联想搜索 ----
+
+    private fun initPoiSuggestion() {
+        val autoComplete = binding.etAddress as AutoCompleteTextView
+        suggestionAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
+        autoComplete.setAdapter(suggestionAdapter)
+        autoComplete.threshold = 2
+
+        // 点击联想项 → 直接定位
+        autoComplete.setOnItemClickListener { parent, _, position, _ ->
+            if (position < poiSuggestions.size) {
+                val poi = poiSuggestions[position]
+                val latLng = LatLng(poi.latLonPoint.latitude, poi.latLonPoint.longitude)
+                selectedLatitude = latLng.latitude
+                selectedLongitude = latLng.longitude
+                selectedAddress = poi.title ?: poi.snippet ?: ""
+
+                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                currentMarker?.remove()
+                currentMarker = aMap.addMarker(
+                    MarkerOptions().position(latLng).title(selectedAddress)
+                )
+
+                binding.tvSearchResult.text = buildString {
+                    append("✓ ${selectedAddress}\n")
+                    append("纬度: ${"%.6f".format(selectedLatitude)}")
+                    append("  经度: ${"%.6f".format(selectedLongitude)}")
+                }
+            }
+        }
+
+        // 输入文字变化 → 防抖搜索 POI
+        autoComplete.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val keyword = s?.toString()?.trim() ?: ""
+                if (keyword.length >= 2) {
+                    searchPoiSuggestions(keyword)
+                } else {
+                    poiSuggestions.clear()
+                    suggestionAdapter.clear()
+                }
+            }
+        })
+    }
+
+    /**
+     * 防抖搜索 POI 联想词
+     */
+    private fun searchPoiSuggestions(keyword: String) {
+        poiSearchJob?.cancel()
+        poiSearchJob = lifecycleScope.launch {
+            delay(400) // 400ms 防抖
+            try {
+                val query = PoiSearch.Query(keyword, "", "")
+                query.pageSize = 10
+                query.pageNum = 0
+                val poiSearch = PoiSearch(this@AddEditAlarmActivity, query)
+                poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
+                    override fun onPoiSearched(result: PoiResult?, rCode: Int) {
+                        val pois = result?.pois
+                        if (pois.isNullOrEmpty()) return
+
+                        poiSuggestions.clear()
+                        poiSuggestions.addAll(pois)
+
+                        val titles = pois.map { poi ->
+                            buildString {
+                                append(poi.title)
+                                poi.snippet?.takeIf { it.isNotEmpty() }?.let {
+                                    append(" — $it")
+                                }
+                            }
+                        }
+                        suggestionAdapter.clear()
+                        suggestionAdapter.addAll(titles)
+                        suggestionAdapter.notifyDataSetChanged()
+
+                        // 显示下拉
+                        if (binding.etAddress is AutoCompleteTextView) {
+                            (binding.etAddress as AutoCompleteTextView).showDropDown()
+                        }
+                    }
+
+                    override fun onPoiItemSearched(item: PoiItem?, rCode: Int) {}
+                })
+                poiSearch.searchPOIAsyn()
+            } catch (e: Exception) {
+                Log.e("AddEditAlarmActivity", "POI 搜索失败: ${e.message}")
+            }
+        }
+    }
+
     // ---- 交互 ----
 
     private fun setupClickListeners() {
@@ -285,6 +393,9 @@ class AddEditAlarmActivity : AppCompatActivity() {
             return
         }
 
+        // 禁用保存按钮防止重复点击
+        binding.btnSave.isEnabled = false
+
         val alarm = Alarm(
             id = if (editingAlarmId != -1L) editingAlarmId else 0,
             name = name,
@@ -296,14 +407,22 @@ class AddEditAlarmActivity : AppCompatActivity() {
             tag = tag
         )
 
+        // 使用 applicationContext 避免在协程中引用可能已销毁的 Activity
+        val app = application as LocationAlarmApp
         lifecycleScope.launch {
-            val app = application as LocationAlarmApp
-            if (editingAlarmId != -1L) {
-                app.repository.update(alarm)
-            } else {
-                app.repository.insert(alarm)
+            try {
+                if (editingAlarmId != -1L) {
+                    app.repository.update(alarm)
+                } else {
+                    app.repository.insert(alarm)
+                }
+            } catch (e: Exception) {
+                Log.e("AddEditAlarmActivity", "保存闹钟失败", e)
             }
-            finish()
+            // 在主线程安全地 finish
+            if (!isFinishing && !isDestroyed) {
+                finish()
+            }
         }
     }
 

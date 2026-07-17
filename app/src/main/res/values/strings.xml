@@ -18,7 +18,7 @@
 
     <!-- 主界面 -->
     <string name="empty_alarm_list">还没有闹钟，点击右下角 + 添加</string>
-    <string name="hint_search_address">输入地址（如：天安门广场）</string>
+    <string name="hint_search_address">输入地址或地点名（支持联想）</string>
     <string name="btn_search">搜索</string>
     <string name="btn_save">保存</string>
     <string name="btn_cancel">取消</string>

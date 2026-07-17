@@ -1,9 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Location pin background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.78"
+        android:pathData="M54,58 m-18,0 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0 M54,58 L42,82 L66,82 Z" />
+    <!-- Pin inner hole -->
     <path
         android:fillColor="#6200EE"
-        android:pathData="M54,18C42.95,18 34,26.95 34,38c0,15 20,37 20,37s20,-22 20,-37c0,-11.05 -8.95,-20 -20,-20zM54,45c-3.87,0 -7,-3.13 -7,-7s3.13,-7 7,-7 7,3.13 7,7 -3.13,7 -7,7z" />
+        android:pathData="M54,58 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <!-- Alarm clock circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M54,32 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" />
+    <!-- Clock hands -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M54,32 L58,28 M54,32 L54,22"
+        android:strokeColor="#6200EE"
+        android:strokeWidth="2.5" />
+    <!-- Clock center dot -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M54,32 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+    <!-- Bell tops -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,21 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,21 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 </vector>

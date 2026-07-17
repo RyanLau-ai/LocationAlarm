@@ -156,12 +156,17 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // 恢复时如果服务未运行且有启用的闹钟，重新启动服务
-        if (!LocationAlarmService.isRunning.value) {
-            viewModel.allAlarms.value?.let { alarms ->
-                if (alarms.any { it.enabled }) {
-                    startLocationService()
+        try {
+            if (!LocationAlarmService.isRunning.value) {
+                viewModel.allAlarms.value?.let { alarms ->
+                    if (alarms.any { it.enabled }) {
+                        startLocationService()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // 防止服务启动失败导致崩溃
+            android.util.Log.w("MainActivity", "重启定位服务失败", e)
         }
     }
 }

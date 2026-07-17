@@ -54,12 +54,14 @@ class LocationAlarmService : Service() {
 
     private var locationClient: AMapLocationClient? = null
     private lateinit var notificationHelper: NotificationHelper
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         notificationHelper = NotificationHelper(this)
+        acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -72,7 +74,47 @@ class LocationAlarmService : Service() {
                 startLocationMonitoring()
             }
         }
+        // START_STICKY: 服务被杀后系统会尝试重建
         return START_STICKY
+    }
+
+    /**
+     * 用户从最近任务列表划掉 app 时调用
+     * 重新启动服务，保持后台运行
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.i(TAG, "onTaskRemoved — 服务可能被系统回收，尝试重启")
+        val restartIntent = Intent(applicationContext, LocationAlarmService::class.java).apply {
+            action = ACTION_START
+        }
+        val pendingIntent = android.app.PendingIntent.getService(
+            this, 1, restartIntent,
+            android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+        // 1 秒后重启服务
+        alarmManager.set(
+            android.app.AlarmManager.ELAPSED_REALTIME,
+            android.os.SystemClock.elapsedRealtime() + 1000,
+            pendingIntent
+        )
+        super.onTaskRemoved(rootIntent)
+    }
+
+    /**
+     * 获取 WakeLock 防止 CPU 休眠
+     */
+    private fun acquireWakeLock() {
+        try {
+            val powerManager = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            wakeLock = powerManager.newWakeLock(
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "LocationAlarm::ServiceWakeLock"
+            )
+            wakeLock?.acquire(60 * 60 * 1000L) // 1 小时后自动释放
+        } catch (e: Exception) {
+            Log.e(TAG, "获取 WakeLock 失败", e)
+        }
     }
 
     /**
@@ -235,17 +277,48 @@ class LocationAlarmService : Service() {
     }
 
     private fun stopSelfSafely() {
-        locationClient?.stopLocation()
-        locationClient?.onDestroy()
+        try {
+            locationClient?.stopLocation()
+            locationClient?.onDestroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "停止定位客户端失败", e)
+        }
         locationClient = null
         isRunning.value = false
         serviceScope.cancel()
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        releaseWakeLock()
+        try {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            Log.e(TAG, "停止前台服务失败", e)
+        }
         stopSelf()
     }
 
+    private fun releaseWakeLock() {
+        try {
+            wakeLock?.let {
+                if (it.isHeld) {
+                    it.release()
+                }
+            }
+            wakeLock = null
+        } catch (e: Exception) {
+            Log.e(TAG, "释放 WakeLock 失败", e)
+        }
+    }
+
     override fun onDestroy() {
-        stopSelfSafely()
+        try {
+            locationClient?.stopLocation()
+            locationClient?.onDestroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "onDestroy 清理定位客户端失败", e)
+        }
+        locationClient = null
+        isRunning.value = false
+        serviceScope.cancel()
+        releaseWakeLock()
         super.onDestroy()
     }
 
