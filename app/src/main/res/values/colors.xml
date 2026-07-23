@@ -1,13 +1,44 @@
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- Primary: Deep Indigo -->
+    <color name="primary">#FF3F51B5</color>
+    <color name="primary_dark">#FF303F9F</color>
+    <color name="primary_light">#FF7986CB</color>
+
+    <!-- Secondary: Teal -->
+    <color name="secondary">#FF00897B</color>
+    <color name="secondary_dark">#FF00695C</color>
+    <color name="secondary_light">#FF4DB6AC</color>
+
+    <!-- Accent: Amber -->
+    <color name="accent">#FFFFB300</color>
+
+    <!-- Status colors -->
+    <color name="success">#FF2E7D32</color>
+    <color name="warning">#FFEF6C00</color>
+    <color name="error">#FFC62828</color>
+
+    <!-- Backgrounds -->
+    <color name="bg_main">#FFFAFAFA</color>
+    <color name="bg_card">#FFFFFFFF</color>
+    <color name="bg_light">#FFF5F5F5</color>
+
+    <!-- Text -->
+    <color name="text_primary">#FF212121</color>
+    <color name="text_secondary">#FF757575</color>
+    <color name="text_hint">#FFBDBDBD</color>
+    <color name="text_on_primary">#FFFFFFFF</color>
+
+    <!-- Status chip backgrounds -->
+    <color name="triggered_bg">#FFFFF8E1</color>
+    <color name="disabled_bg">#FFEEEEEE</color>
+    <color name="active_bg">#FFE8F5E9</color>
+
+    <!-- Legacy (keep for compatibility) -->
+    <color name="purple_200">#FF7986CB</color>
+    <color name="purple_500">#FF3F51B5</color>
+    <color name="purple_700">#FF303F9F</color>
+    <color name="teal_200">#FF4DB6AC</color>
+    <color name="teal_700">#FF00695C</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="text_secondary">#FF757575</color>
-    <color name="bg_light">#FFF5F5F5</color>
-    <color name="triggered_bg">#FFFFF3E0</color>
-    <color name="disabled_bg">#FFEEEEEE</color>
 </resources>

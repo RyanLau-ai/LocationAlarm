@@ -4,50 +4,31 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bg_main"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
 
-        <!-- 闹钟名称 -->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
+        <!-- Section: Location -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:hint="@string/hint_name">
+            android:layout_marginTop="4dp"
+            android:text="选择位置"
+            android:textColor="@color/primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- 提醒内容 -->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:hint="@string/hint_reminder">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etReminder"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- 地址搜索栏（带联想下拉） -->
+        <!-- Address search bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
@@ -55,17 +36,18 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="@string/hint_search_address">
+                android:hint="@string/hint_search_address"
+                app:startIconDrawable="@android:drawable/ic_menu_search">
 
                 <AutoCompleteTextView
                     android:id="@+id/etAddress"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
                     android:completionThreshold="2"
                     android:clickable="true"
-                    android:focusable="true" />
+                    android:focusable="true"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
@@ -77,30 +59,32 @@
                 android:text="@string/btn_search" />
         </LinearLayout>
 
-        <!-- 地图选点区域 -->
+        <!-- Map card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="320dp"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp"
+            app:strokeWidth="0dp">
 
-            <com.amap.api.maps.MapView
+            <org.osmdroid.views.MapView
                 android:id="@+id/mapView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <!-- 中心选点标记 -->
+            <!-- Center marker pin -->
             <ImageView
                 android:id="@+id/ivCenterMarker"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:src="@android:drawable/ic_dialog_map"
                 android:contentDescription="选点标记"
-                android:translationY="-12dp" />
+                android:src="@android:drawable/ic_menu_mylocation"
+                android:translationY="-12dp"
+                android:visibility="gone" />
 
-            <!-- 定位按钮 -->
+            <!-- My location FAB -->
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/fabMyLocation"
                 android:layout_width="wrap_content"
@@ -109,61 +93,126 @@
                 android:layout_margin="12dp"
                 android:contentDescription="回到我的位置"
                 android:src="@android:drawable/ic_menu_mylocation"
-                app:fabSize="mini" />
+                app:backgroundTint="@color/white"
+                app:fabSize="mini"
+                app:tint="@color/primary" />
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 选中位置信息 -->
-        <TextView
-            android:id="@+id/tvSearchResult"
+        <!-- Selected location info -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="请在地图上点击选择位置，或使用上方搜索"
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp" />
+            android:layout_marginTop="8dp"
+            app:cardBackgroundColor="@color/bg_light"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
 
-        <!-- 触发范围 -->
+            <TextView
+                android:id="@+id/tvSearchResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="请在地图上点击选择位置，或使用上方搜索"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Section: Alarm info -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="闹钟信息"
+            android:textColor="@color/primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Alarm name -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:hint="@string/hint_radius">
+            android:layout_marginTop="8dp"
+            android:hint="@string/hint_name"
+            app:startIconDrawable="@android:drawable/ic_menu_agenda">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etRadius"
+                android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"
-                android:text="500" />
+                android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 重复提醒选择 -->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:hint="重复提醒">
-
-            <AutoCompleteTextView
-                android:id="@+id/spinnerRepeat"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none"
-                android:clickable="true"
-                android:focusable="true"
-                android:completionThreshold="0" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- 标签 -->
+        <!-- Reminder content -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:hint="@string/hint_tag">
+            android:layout_marginTop="12dp"
+            android:hint="@string/hint_reminder"
+            app:startIconDrawable="@android:drawable/ic_menu_compass">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etReminder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Radius + Repeat row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/hint_radius"
+                app:suffixText="米">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRadius"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="500" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:hint="@string/hint_repeat">
+
+                <AutoCompleteTextView
+                    android:id="@+id/spinnerRepeat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:completionThreshold="0"
+                    android:focusable="true"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Tag -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/hint_tag"
+            app:startIconDrawable="@android:drawable/ic_menu_sort_by_size">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etTag"
@@ -172,10 +221,12 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 按钮 -->
+        <!-- Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
             android:orientation="horizontal">
 
             <Button

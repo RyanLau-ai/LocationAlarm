@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">位置闹钟</string>
 
-    <!-- 通知渠道 -->
+    <!-- Notification channels -->
     <string name="notification_channel_service">定位服务</string>
     <string name="notification_channel_service_desc">保持位置闹钟在后台运行</string>
     <string name="notification_channel_alarm">闹钟提醒</string>
@@ -9,14 +9,14 @@
     <string name="notification_channel_permission">权限提醒</string>
     <string name="notification_channel_permission_desc">缺少必要权限时的提醒</string>
 
-    <!-- 服务通知 -->
+    <!-- Service notification -->
     <string name="service_notification_active">正在监控 %1$d 个闹钟</string>
     <string name="service_notification_idle">位置闹钟运行中</string>
 
-    <!-- 权限 -->
+    <!-- Permissions -->
     <string name="permission_required_title">需要权限</string>
 
-    <!-- 主界面 -->
+    <!-- Main screen -->
     <string name="empty_alarm_list">还没有闹钟，点击右下角 + 添加</string>
     <string name="hint_search_address">输入地址或地点名（支持联想）</string>
     <string name="btn_search">搜索</string>
@@ -25,7 +25,7 @@
     <string name="btn_history">历史记录</string>
     <string name="btn_clear_all">清除全部</string>
 
-    <!-- 添加/编辑闹钟 -->
+    <!-- Add/edit alarm -->
     <string name="hint_name">闹钟名称（如：到公司提醒打卡）</string>
     <string name="hint_reminder">提醒内容（如：记得打卡！）</string>
     <string name="hint_radius">触发范围（米）</string>

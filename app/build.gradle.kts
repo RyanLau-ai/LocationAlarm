@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.locationalarm"
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,11 +60,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // 高德 3D 地图 SDK（已内置定位模块，无需单独引入 location）
-    implementation("com.amap.api:3dmap:9.6.0")
+    // OSMDroid - OpenStreetMap, no API key required
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
-    // 高德搜索 SDK（地理编码：地址转坐标、逆地理编码）
-    implementation("com.amap.api:search:9.5.0")
+    // CoordinatorLayout (for AppBar + FAB)
+    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -72,7 +72,7 @@ dependencies {
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
-    // WorkManager — 周期性健康检查，确保服务被杀后能恢复
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Testing

@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.locationalarm.LocationAlarmApp
 import com.example.locationalarm.databinding.ActivityMainBinding
 import com.example.locationalarm.service.LocationAlarmService
+import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,9 +25,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: AlarmViewModel
     private lateinit var adapter: AlarmAdapter
 
-    /**
-     * 权限请求 launcher
-     */
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -34,7 +32,6 @@ class MainActivity : AppCompatActivity() {
         val notificationGranted = results[Manifest.permission.POST_NOTIFICATIONS] ?: true
 
         if (fineLocationGranted) {
-            // 定位权限已获取，请求后台定位权限 (Android 10+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 requestBackgroundLocationPermission()
             } else {
@@ -47,8 +44,7 @@ class MainActivity : AppCompatActivity() {
 
     private val backgroundLocationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        // 无论是否授予后台定位权限，都尝试启动服务
+    ) { _ ->
         startLocationService()
     }
 
@@ -57,10 +53,24 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupToolbar()
         setupViewModel()
         setupRecyclerView()
         setupClickListeners()
         checkAndRequestPermissions()
+    }
+
+    private fun setupToolbar() {
+        setSupportActionBar(binding.toolbar)
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_history -> {
+                    startActivity(Intent(this, HistoryActivity::class.java))
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     private fun setupViewModel() {
@@ -76,7 +86,6 @@ class MainActivity : AppCompatActivity() {
         adapter = AlarmAdapter(
             onToggle = { alarm ->
                 viewModel.setAlarmEnabled(alarm.id, alarm.enabled)
-                // 如果有启用的闹钟，确保服务在运行
                 if (alarm.enabled) startLocationService()
             },
             onEdit = { alarm ->
@@ -87,6 +96,9 @@ class MainActivity : AppCompatActivity() {
             },
             onDelete = { alarm ->
                 viewModel.deleteAlarm(alarm)
+                Snackbar.make(binding.root, "已删除：${alarm.name}", Snackbar.LENGTH_SHORT)
+                    .setAction("撤销") { viewModel.insertAlarm(alarm) }
+                    .show()
             }
         )
 
@@ -98,24 +110,18 @@ class MainActivity : AppCompatActivity() {
         binding.fabAddAlarm.setOnClickListener {
             startActivity(Intent(this, AddEditAlarmActivity::class.java))
         }
-
-        binding.btnHistory.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
-        }
     }
 
-    // ---- 权限处理 ----
+    // ---- Permissions ----
 
     private fun checkAndRequestPermissions() {
         val permissions = mutableListOf<String>()
 
-        // 定位权限
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
         permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
 
-        // 通知权限 (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -125,7 +131,6 @@ class MainActivity : AppCompatActivity() {
         if (permissions.isNotEmpty()) {
             permissionLauncher.launch(permissions.toTypedArray())
         } else {
-            // 已有定位权限，检查后台定位
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                 checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED
             ) {
@@ -146,35 +151,31 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, LocationAlarmService::class.java).apply {
             action = LocationAlarmService.ACTION_START
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Start service failed", e)
         }
 
-        // 请求电池优化白名单 — 这是保活的关键
         requestBatteryOptimizationExemption()
     }
 
-    /**
-     * 请求将应用加入电池优化白名单
-     *
-     * 厂商 ROM (小米/华为/OPPO/vivo) 对后台服务有严格限制，
-     * 加入白名单后可以大幅降低被杀的概率。
-     */
     private fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             val isIgnoring = powerManager.isIgnoringBatteryOptimizations(packageName)
 
             if (!isIgnoring) {
-                // 弹出对话框解释为何需要电池优化白名单
                 AlertDialog.Builder(this)
                     .setTitle("需要关闭电池优化")
                     .setMessage(
                         "为了确保位置闹钟在后台持续运行，需要将此应用加入" +
                         "电池优化白名单。\n\n" +
-                        "如果您跳过此步骤，系统可能在后台杀死定位服务，" +
+                        "如果跳过此步骤，系统可能在后台杀死定位服务，" +
                         "导致无法准时提醒。\n\n" +
                         "点击「确定」前往设置页面，选择「不优化」。"
                     )
@@ -185,7 +186,6 @@ class MainActivity : AppCompatActivity() {
                             }
                             startActivity(intent)
                         } catch (e: Exception) {
-                            // 某些 ROM 可能不支持此 intent，降级到电池优化列表页
                             try {
                                 val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                 startActivity(intent)
@@ -195,11 +195,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     .setNegativeButton("稍后") { _, _ ->
-                        Toast.makeText(
-                            this,
-                            "未关闭电池优化可能导致后台服务被杀",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Toast.makeText(this, "未关闭电池优化可能导致后台服务被杀", Toast.LENGTH_LONG).show()
                     }
                     .setCancelable(false)
                     .show()
@@ -214,7 +210,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 恢复时如果服务未运行且有启用的闹钟，重新启动服务
         try {
             if (!LocationAlarmService.isRunning.value) {
                 viewModel.allAlarms.value?.let { alarms ->
@@ -224,8 +219,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            // 防止服务启动失败导致崩溃
-            android.util.Log.w("MainActivity", "重启定位服务失败", e)
+            android.util.Log.w("MainActivity", "Restart service failed", e)
         }
     }
 }

@@ -2,16 +2,15 @@ package com.example.locationalarm
 
 import android.app.Application
 import android.util.Log
-import com.amap.api.location.AMapLocationClient
 import com.example.locationalarm.data.AlarmRepository
 import com.example.locationalarm.service.ServiceHealthWorker
+import org.osmdroid.config.Configuration
 
 /**
- * Application 类 — 全局初始化
+ * Application class - global initialization
  *
- * 高德隐私合规要求：
- * 在调用定位 SDK 任何接口之前，必须调用 AMapLocationClient.updatePrivacyShow/Agree，
- * 否则 SDK 不会正常工作。
+ * Initializes OSMDroid configuration and registers WorkManager health check.
+ * No third-party API key required.
  */
 class LocationAlarmApp : Application() {
 
@@ -26,17 +25,17 @@ class LocationAlarmApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 高德隐私合规初始化
+        // Initialize OSMDroid - set user agent (required by OpenStreetMap tile usage policy)
         try {
-            AMapLocationClient.updatePrivacyShow(this, true, true)
-            AMapLocationClient.updatePrivacyAgree(this, true)
+            Configuration.getInstance().userAgentValue = packageName
+            Configuration.getInstance().osmdroidTileCache = getExternalFilesDir(null)
+            Log.i(TAG, "OSMDroid initialized, userAgent=$packageName")
         } catch (e: Exception) {
-            Log.e(TAG, "高德隐私合规初始化失败", e)
+            Log.e(TAG, "OSMDroid initialization failed", e)
         }
 
-        // 注册 WorkManager 周期性健康检查
-        // 每 15 分钟检查一次服务是否存活，如果被杀则自动恢复
+        // Register WorkManager periodic health check
         ServiceHealthWorker.enqueue(this)
-        Log.i(TAG, "应用初始化完成")
+        Log.i(TAG, "Application initialized")
     }
 }

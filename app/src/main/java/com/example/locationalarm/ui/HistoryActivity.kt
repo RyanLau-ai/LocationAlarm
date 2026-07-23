@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.locationalarm.databinding.ActivityHistoryBinding
+import com.google.android.material.snackbar.Snackbar
 
 class HistoryActivity : AppCompatActivity() {
 
@@ -19,12 +20,14 @@ class HistoryActivity : AppCompatActivity() {
         binding = ActivityHistoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        title = "触发历史"
+        setSupportActionBar(binding.toolbar)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
         viewModel = ViewModelProvider(this)[AlarmViewModel::class.java]
 
         adapter = HistoryAdapter(onDelete = { history ->
             viewModel.deleteHistoryById(history.id)
+            Snackbar.make(binding.root, "已删除", Snackbar.LENGTH_SHORT).show()
         })
 
         binding.recyclerViewHistory.layoutManager = LinearLayoutManager(this)

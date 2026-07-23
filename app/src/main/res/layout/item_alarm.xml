@@ -4,17 +4,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="18dp">
 
-        <!-- 顶部：名称 + 开关 -->
+        <!-- Top: name + switch -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,8 +27,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textColor="@color/black"
-                android:textSize="18sp"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 tools:text="到公司提醒打卡" />
 
@@ -37,21 +38,22 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <!-- 提醒内容 -->
+        <!-- Reminder -->
         <TextView
             android:id="@+id/tvReminder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
             tools:text="记得打卡！" />
 
-        <!-- 地址 + 范围 -->
+        <!-- Address + Radius -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
@@ -60,37 +62,47 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:drawablePadding="4dp"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
+                app:drawableStartCompat="@android:drawable/ic_menu_mylocation"
+                app:drawableTint="@color/primary"
                 tools:text="北京市朝阳区xxx" />
 
             <TextView
                 android:id="@+id/tvRadius"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/purple_500"
-                android:textSize="13sp"
+                android:background="@drawable/chip_radius"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/primary"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 tools:text="500 米" />
         </LinearLayout>
 
-        <!-- 重复提醒信息 -->
+        <!-- Repeat info -->
         <TextView
             android:id="@+id/tvRepeatInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/teal_700"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/chip_repeat"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:textColor="@color/secondary_dark"
             android:textSize="12sp"
             android:visibility="gone"
             tools:text="每 5 分钟重复"
             tools:visibility="visible" />
 
-        <!-- 底部：标签 + 状态 + 操作按钮 -->
+        <!-- Bottom: tag + status + actions -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -98,19 +110,24 @@
                 android:id="@+id/tvTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@color/bg_light"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:textColor="@color/purple_700"
+                android:background="@drawable/chip_tag"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:textColor="@color/primary_dark"
                 android:textSize="12sp"
-                tools:text="#工作" />
+                android:visibility="gone"
+                tools:text="#工作"
+                tools:visibility="visible" />
 
             <TextView
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="@color/teal_700"
+                android:background="@drawable/chip_status"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:textColor="@color/warning"
                 android:textSize="12sp"
                 android:visibility="gone"
                 tools:text="已触发"
@@ -123,20 +140,22 @@
 
             <ImageButton
                 android:id="@+id/btnEdit"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="编辑"
-                android:src="@android:drawable/ic_menu_edit" />
+                android:src="@android:drawable/ic_menu_edit"
+                app:tint="@color/primary" />
 
             <ImageButton
                 android:id="@+id/btnDelete"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="删除"
-                android:src="@android:drawable/ic_menu_delete" />
+                android:src="@android:drawable/ic_menu_delete"
+                app:tint="@color/error" />
         </LinearLayout>
 
     </LinearLayout>

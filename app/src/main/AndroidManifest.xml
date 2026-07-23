@@ -2,42 +2,42 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 前台服务权限 -->
+    <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
-    <!-- 位置权限 -->
+    <!-- Location permissions -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- 通知权限 (Android 13+) -->
+    <!-- Notification permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- 开机自启 -->
+    <!-- Boot completed -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- 地理编码需要网络 -->
+    <!-- Network for OSMDroid tiles + Nominatim geocoding -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- 振动 -->
+    <!-- Vibration -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- 高德定位 SDK 需要的额外权限 -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-
-    <!-- 电池优化白名单（保活） -->
+    <!-- Battery optimization whitelist (keep alive) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Android 12+ 精确闹钟权限（onTaskRemoved 重启服务需要） -->
+    <!-- Exact alarm (service restart) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
-    <!-- Android 14+ 前台服务类型声明 -->
+    <!-- Android 14+ foreground service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- OSMDroid requires storage permission for tile cache on older APIs -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <application
         android:name=".LocationAlarmApp"
@@ -48,11 +48,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LocationAlarm">
-
-        <!-- 高德 API Key -->
-        <meta-data
-            android:name="com.amap.api.v2.apikey"
-            android:value="04ea2abcb63f9f3b233175df7eb27e29" />
 
         <activity
             android:name=".ui.MainActivity"
@@ -74,14 +69,14 @@
             android:exported="false"
             android:parentActivityName=".ui.MainActivity" />
 
-        <!-- 前台定位服务 -->
+        <!-- Foreground location service -->
         <service
             android:name=".service.LocationAlarmService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
 
-        <!-- 开机自启接收器 -->
+        <!-- Boot receiver -->
         <receiver
             android:name=".service.BootReceiver"
             android:enabled="true"
@@ -93,7 +88,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- 服务重启接收器 — 服务被杀后恢复 -->
+        <!-- Service restart receiver -->
         <receiver
             android:name=".service.RestartReceiver"
             android:enabled="true"
