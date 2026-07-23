@@ -30,4 +30,5 @@
     <string name="hint_reminder">提醒内容（如：记得打卡！）</string>
     <string name="hint_radius">触发范围（米）</string>
     <string name="hint_tag">分类标签（可选）</string>
+    <string name="hint_repeat">重复提醒</string>
 </resources>

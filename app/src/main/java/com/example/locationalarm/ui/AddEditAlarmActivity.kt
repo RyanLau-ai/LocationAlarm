@@ -40,6 +40,24 @@ import kotlinx.coroutines.withContext
 
 class AddEditAlarmActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TAG = "AddEditAlarmActivity"
+        const val EXTRA_ALARM_ID = "extra_alarm_id"
+
+        /** 重复提醒选项（毫秒） */
+        private val REPEAT_OPTIONS = arrayOf(
+            Pair("仅提醒一次", 0L),
+            Pair("每 1 分钟", 60_000L),
+            Pair("每 3 分钟", 180_000L),
+            Pair("每 5 分钟", 300_000L),
+            Pair("每 10 分钟", 600_000L),
+            Pair("每 15 分钟", 900_000L),
+            Pair("每 30 分钟", 1_800_000L),
+            Pair("每 1 小时", 3_600_000L),
+            Pair("每 2 小时", 7_200_000L)
+        )
+    }
+
     private lateinit var binding: ActivityAddEditAlarmBinding
     private var editingAlarmId: Long = -1L
 
@@ -58,10 +76,13 @@ class AddEditAlarmActivity : AppCompatActivity() {
     private var selectedLongitude: Double = 0.0
     private var selectedAddress: String = ""
 
+    // 重复提醒间隔（毫秒），默认 0 = 仅提醒一次
+    private var selectedRepeatInterval: Long = 0L
+
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
+        if (granted && !isFinishing && !isDestroyed) {
             aMap.isMyLocationEnabled = true
         }
     }
@@ -77,10 +98,20 @@ class AddEditAlarmActivity : AppCompatActivity() {
         initMap(savedInstanceState)
         initGeocodeSearch()
         initPoiSuggestion()
+        initRepeatSpinner()
         setupClickListeners()
 
         if (editingAlarmId != -1L) {
             loadAlarmForEditing()
+        }
+    }
+
+    /**
+     * 安全地执行 UI 操作，仅在 Activity 未销毁时执行
+     */
+    private fun runOnUiIfAlive(action: () -> Unit) {
+        if (!isFinishing && !isDestroyed) {
+            runOnUiThread(action)
         }
     }
 
@@ -129,7 +160,9 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 .title("选中位置")
         )
 
-        binding.tvSearchResult.text = "正在获取地址..."
+        runOnUiIfAlive {
+            binding.tvSearchResult.text = "正在获取地址..."
+        }
 
         // 反向地理编码
         val query = RegeocodeQuery(
@@ -145,49 +178,60 @@ class AddEditAlarmActivity : AppCompatActivity() {
     private fun initGeocodeSearch() {
         geocodeSearch = GeocodeSearch(this)
 
-        // 正向地理编码回调（地址 → 坐标）
+        // 正向地理编码回调（地址 -> 坐标）
         geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
             override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {
-                val addressList = result?.geocodeAddressList
-                if (addressList.isNullOrEmpty()) {
-                    binding.tvSearchResult.text = "未找到该地址，请尝试更详细的关键词"
-                    return
-                }
+                runOnUiIfAlive {
+                    val addressList = result?.geocodeAddressList
+                    if (addressList.isNullOrEmpty()) {
+                        binding.tvSearchResult.text = "未找到该地址，请尝试更详细的关键词"
+                        binding.btnSearchAddress.isEnabled = true
+                        return@runOnUiIfAlive
+                    }
 
-                val first = addressList[0]
-                val latLng = LatLng(first.latLonPoint.latitude, first.latLonPoint.longitude)
-                selectedLatitude = latLng.latitude
-                selectedLongitude = latLng.longitude
-                selectedAddress = first.formatAddress ?: first.adcode
+                    val first = addressList[0]
+                    val latLng = LatLng(first.latLonPoint.latitude, first.latLonPoint.longitude)
+                    selectedLatitude = latLng.latitude
+                    selectedLongitude = latLng.longitude
+                    selectedAddress = first.formatAddress ?: first.adcode ?: ""
 
-                // 移动地图到搜索结果
-                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                    // 移动地图到搜索结果
+                    aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
 
-                // 添加标记
-                currentMarker?.remove()
-                currentMarker = aMap.addMarker(
-                    MarkerOptions().position(latLng).title(selectedAddress)
-                )
+                    // 添加标记
+                    currentMarker?.remove()
+                    currentMarker = aMap.addMarker(
+                        MarkerOptions().position(latLng).title(selectedAddress)
+                    )
 
-                binding.tvSearchResult.text = buildString {
-                    append("✓ ${selectedAddress}\n")
-                    append("纬度: ${"%.6f".format(selectedLatitude)}")
-                    append("  经度: ${"%.6f".format(selectedLongitude)}")
+                    binding.tvSearchResult.text = buildString {
+                        append("* ${selectedAddress}\n")
+                        append("纬度: ${"%.6f".format(selectedLatitude)}")
+                        append("  经度: ${"%.6f".format(selectedLongitude)}")
+                    }
+                    binding.btnSearchAddress.isEnabled = true
                 }
             }
 
             override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
-                val addr: RegeocodeAddress? = result?.regeocodeAddress
-                if (addr == null) {
-                    selectedAddress = "纬度 ${"%.6f".format(selectedLatitude)}, 经度 ${"%.6f".format(selectedLongitude)}"
-                } else {
-                    selectedAddress = addr.formatAddress ?: addr.province + addr.city + addr.district
-                }
+                runOnUiIfAlive {
+                    val addr: RegeocodeAddress? = result?.regeocodeAddress
+                    if (addr == null) {
+                        selectedAddress = "纬度 ${"%.6f".format(selectedLatitude)}, 经度 ${"%.6f".format(selectedLongitude)}"
+                    } else {
+                        // 安全拼接，逐字段判空
+                        val parts = mutableListOf<String>()
+                        addr.province?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                        addr.city?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                        addr.district?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                        selectedAddress = addr.formatAddress ?: parts.joinToString("")
+                    }
 
-                binding.tvSearchResult.text = buildString {
-                    append("✓ ${selectedAddress}\n")
-                    append("纬度: ${"%.6f".format(selectedLatitude)}")
-                    append("  经度: ${"%.6f".format(selectedLongitude)}")
+                    binding.tvSearchResult.text = buildString {
+                        append("* ${selectedAddress}\n")
+                        append("纬度: ${"%.6f".format(selectedLatitude)}")
+                        append("  经度: ${"%.6f".format(selectedLongitude)}")
+                    }
                 }
             }
         })
@@ -201,7 +245,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
         autoComplete.setAdapter(suggestionAdapter)
         autoComplete.threshold = 2
 
-        // 点击联想项 → 直接定位
+        // 点击联想项 -> 直接定位
         autoComplete.setOnItemClickListener { parent, _, position, _ ->
             if (position < poiSuggestions.size) {
                 val poi = poiSuggestions[position]
@@ -217,14 +261,14 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 )
 
                 binding.tvSearchResult.text = buildString {
-                    append("✓ ${selectedAddress}\n")
+                    append("* ${selectedAddress}\n")
                     append("纬度: ${"%.6f".format(selectedLatitude)}")
                     append("  经度: ${"%.6f".format(selectedLongitude)}")
                 }
             }
         }
 
-        // 输入文字变化 → 防抖搜索 POI
+        // 输入文字变化 -> 防抖搜索 POI
         autoComplete.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -247,6 +291,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
         poiSearchJob?.cancel()
         poiSearchJob = lifecycleScope.launch {
             delay(400) // 400ms 防抖
+            if (!isActive) return@launch
             try {
                 val query = PoiSearch.Query(keyword, "", "")
                 query.pageSize = 10
@@ -254,27 +299,29 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 val poiSearch = PoiSearch(this@AddEditAlarmActivity, query)
                 poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
                     override fun onPoiSearched(result: PoiResult?, rCode: Int) {
-                        val pois = result?.pois
-                        if (pois.isNullOrEmpty()) return
+                        runOnUiIfAlive {
+                            val pois = result?.pois
+                            if (pois.isNullOrEmpty()) return@runOnUiIfAlive
 
-                        poiSuggestions.clear()
-                        poiSuggestions.addAll(pois)
+                            poiSuggestions.clear()
+                            poiSuggestions.addAll(pois)
 
-                        val titles = pois.map { poi ->
-                            buildString {
-                                append(poi.title)
-                                poi.snippet?.takeIf { it.isNotEmpty() }?.let {
-                                    append(" — $it")
+                            val titles = pois.map { poi ->
+                                buildString {
+                                    append(poi.title)
+                                    poi.snippet?.takeIf { it.isNotEmpty() }?.let {
+                                        append(" - $it")
+                                    }
                                 }
                             }
-                        }
-                        suggestionAdapter.clear()
-                        suggestionAdapter.addAll(titles)
-                        suggestionAdapter.notifyDataSetChanged()
+                            suggestionAdapter.clear()
+                            suggestionAdapter.addAll(titles)
+                            suggestionAdapter.notifyDataSetChanged()
 
-                        // 显示下拉
-                        if (binding.etAddress is AutoCompleteTextView) {
-                            (binding.etAddress as AutoCompleteTextView).showDropDown()
+                            // 显示下拉
+                            if (binding.etAddress is AutoCompleteTextView) {
+                                (binding.etAddress as AutoCompleteTextView).showDropDown()
+                            }
                         }
                     }
 
@@ -282,9 +329,32 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 })
                 poiSearch.searchPOIAsyn()
             } catch (e: Exception) {
-                Log.e("AddEditAlarmActivity", "POI 搜索失败: ${e.message}")
+                Log.e(TAG, "POI 搜索失败: ${e.message}")
             }
         }
+    }
+
+    // ---- 重复提醒下拉 ----
+
+    private fun initRepeatSpinner() {
+        val spinner = binding.spinnerRepeat
+        val labels = REPEAT_OPTIONS.map { it.first }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, labels)
+        spinner.setAdapter(adapter)
+        spinner.threshold = 0
+        spinner.setOnClickListener {
+            spinner.showDropDown()
+        }
+
+        spinner.setOnItemClickListener { _, _, position, _ ->
+            if (position < REPEAT_OPTIONS.size) {
+                selectedRepeatInterval = REPEAT_OPTIONS[position].second
+            }
+        }
+
+        // 默认选中第一项
+        spinner.setText(labels[0], false)
+        selectedRepeatInterval = REPEAT_OPTIONS[0].second
     }
 
     // ---- 交互 ----
@@ -298,7 +368,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
         }
 
         binding.fabMyLocation.setOnClickListener {
-            // 回到我的位置 — 使用高德定位
+            // 回到我的位置 - 使用高德定位
             aMap.isMyLocationEnabled = true
             // 移动到定位点
             val myLoc = aMap.myLocation
@@ -321,7 +391,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
     }
 
     /**
-     * 正向地理编码搜索：地址文本 → 坐标
+     * 正向地理编码搜索：地址文本 -> 坐标
      */
     private fun searchAddress(query: String) {
         binding.btnSearchAddress.isEnabled = false
@@ -332,7 +402,9 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         // 恢复按钮（回调后会更新文本）
         binding.btnSearchAddress.postDelayed({
-            binding.btnSearchAddress.isEnabled = true
+            if (!isFinishing && !isDestroyed) {
+                binding.btnSearchAddress.isEnabled = true
+            }
         }, 1000)
     }
 
@@ -342,6 +414,8 @@ class AddEditAlarmActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val alarm = (application as LocationAlarmApp).repository.getAlarmById(editingAlarmId)
             alarm?.let {
+                if (isFinishing || isDestroyed) return@let
+
                 binding.etName.setText(it.name)
                 binding.etReminder.setText(it.reminder)
                 binding.etAddress.setText(it.address)
@@ -350,6 +424,13 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 selectedLatitude = it.latitude
                 selectedLongitude = it.longitude
                 selectedAddress = it.address
+                selectedRepeatInterval = it.repeatInterval
+
+                // 设置重复提醒下拉
+                val matchIndex = REPEAT_OPTIONS.indexOfFirst { _, ms -> ms == it.repeatInterval }
+                if (matchIndex >= 0) {
+                    binding.spinnerRepeat.setText(REPEAT_OPTIONS[matchIndex].first, false)
+                }
 
                 // 地图移动到已存位置
                 val latLng = LatLng(it.latitude, it.longitude)
@@ -359,7 +440,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 )
 
                 binding.tvSearchResult.text = buildString {
-                    append("✓ ${it.address}\n")
+                    append("* ${it.address}\n")
                     append("纬度: ${"%.6f".format(it.latitude)}")
                     append("  经度: ${"%.6f".format(it.longitude)}")
                 }
@@ -404,7 +485,8 @@ class AddEditAlarmActivity : AppCompatActivity() {
             longitude = selectedLongitude,
             address = selectedAddress,
             radius = radius,
-            tag = tag
+            tag = tag,
+            repeatInterval = selectedRepeatInterval
         )
 
         // 使用 applicationContext 避免在协程中引用可能已销毁的 Activity
@@ -412,12 +494,18 @@ class AddEditAlarmActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 if (editingAlarmId != -1L) {
-                    app.repository.update(alarm)
+                    // 编辑模式：保留 triggered 和 lastTriggeredAt
+                    val existing = app.repository.getAlarmById(editingAlarmId)
+                    val updated = alarm.copy(
+                        triggered = existing?.triggered ?: false,
+                        lastTriggeredAt = existing?.lastTriggeredAt ?: 0L
+                    )
+                    app.repository.update(updated)
                 } else {
                     app.repository.insert(alarm)
                 }
             } catch (e: Exception) {
-                Log.e("AddEditAlarmActivity", "保存闹钟失败", e)
+                Log.e(TAG, "保存闹钟失败", e)
             }
             // 在主线程安全地 finish
             if (!isFinishing && !isDestroyed) {
@@ -454,9 +542,5 @@ class AddEditAlarmActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         binding.mapView.onDestroy()
-    }
-
-    companion object {
-        const val EXTRA_ALARM_ID = "extra_alarm_id"
     }
 }

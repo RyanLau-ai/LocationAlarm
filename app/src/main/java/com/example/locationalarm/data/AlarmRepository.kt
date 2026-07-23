@@ -31,6 +31,9 @@ class AlarmRepository(context: Context) {
 
     suspend fun setTriggered(id: Long, triggered: Boolean) = alarmDao.setTriggered(id, triggered)
 
+    suspend fun setTriggeredAndTime(id: Long, triggered: Boolean, lastTriggeredAt: Long) =
+        alarmDao.setTriggeredAndTime(id, triggered, lastTriggeredAt)
+
     fun getAllTags(): LiveData<List<String>> = alarmDao.getAllTags()
 
     // ---- 历史记录 ----

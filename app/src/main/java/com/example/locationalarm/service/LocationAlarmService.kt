@@ -13,7 +13,6 @@ import androidx.core.app.ServiceCompat
 import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
-import com.amap.api.location.AMapLocationListener
 import com.example.locationalarm.LocationAlarmApp
 import com.example.locationalarm.data.Alarm
 import com.example.locationalarm.data.AlarmHistory
@@ -28,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * 2. 定期获取当前位置，与所有启用的闹钟比较距离
  * 3. 进入范围 → 触发通知 + 记录历史
  * 4. 离开范围 → 重置闹钟，允许再次触发
+ * 5. 支持重复提醒：设置 repeatInterval > 0 时，在范围内按间隔重复触发
  *
  * 厂商适配注意：
  * - 小米/红米：需在「自启动管理」中允许应用自启动
@@ -58,6 +58,9 @@ class LocationAlarmService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** 防止重复初始化定位客户端 */
+    private var isLocationMonitoring = false
+
     override fun onCreate() {
         super.onCreate()
         notificationHelper = NotificationHelper(this)
@@ -81,9 +84,10 @@ class LocationAlarmService : Service() {
     /**
      * 用户从最近任务列表划掉 app 时调用
      * 重新启动服务，保持后台运行
+     * 使用 setExactAndAllowWhileIdle 确保在 Doze 模式下也能唤醒
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.i(TAG, "onTaskRemoved — 服务可能被系统回收，尝试重启")
+        Log.i(TAG, "onTaskRemoved - 服务可能被系统回收，尝试重启")
         val restartIntent = Intent(applicationContext, LocationAlarmService::class.java).apply {
             action = ACTION_START
         }
@@ -92,17 +96,30 @@ class LocationAlarmService : Service() {
             android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
         )
         val alarmManager = getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-        // 1 秒后重启服务
-        alarmManager.set(
-            android.app.AlarmManager.ELAPSED_REALTIME,
-            android.os.SystemClock.elapsedRealtime() + 1000,
-            pendingIntent
-        )
+        // 1 秒后重启服务，使用 setExactAndAllowWhileIdle 以在 Doze 下也能触发
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    android.os.SystemClock.elapsedRealtime() + 1000,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.set(
+                    android.app.AlarmManager.ELAPSED_REALTIME,
+                    android.os.SystemClock.elapsedRealtime() + 1000,
+                    pendingIntent
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "onTaskRemoved 重启定时器失败", e)
+        }
         super.onTaskRemoved(rootIntent)
     }
 
     /**
      * 获取 WakeLock 防止 CPU 休眠
+     * 延长到 12 小时，并在到期前续期
      */
     private fun acquireWakeLock() {
         try {
@@ -111,7 +128,8 @@ class LocationAlarmService : Service() {
                 android.os.PowerManager.PARTIAL_WAKE_LOCK,
                 "LocationAlarm::ServiceWakeLock"
             )
-            wakeLock?.acquire(60 * 60 * 1000L) // 1 小时后自动释放
+            // 12 小时后自动释放（服务运行期间会持续持有）
+            wakeLock?.acquire(12 * 60 * 60 * 1000L)
         } catch (e: Exception) {
             Log.e(TAG, "获取 WakeLock 失败", e)
         }
@@ -119,17 +137,29 @@ class LocationAlarmService : Service() {
 
     /**
      * 启动前台服务并开始高德定位监听
+     * 防重复初始化：如果已经在监听则直接返回
      */
+    @Synchronized
     private fun startLocationMonitoring() {
         // 启动前台服务通知
         val notification = notificationHelper.buildServiceNotification(0)
-        ServiceCompat.startForeground(
-            this,
-            NotificationHelper.NOTIFICATION_ID_SERVICE,
-            notification,
-            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        )
+        try {
+            ServiceCompat.startForeground(
+                this,
+                NotificationHelper.NOTIFICATION_ID_SERVICE,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "启动前台服务失败", e)
+        }
         isRunning.value = true
+
+        // 防止重复初始化
+        if (isLocationMonitoring && locationClient != null) {
+            Log.i(TAG, "定位监听已在运行，跳过重复初始化")
+            return
+        }
 
         // 检查权限
         if (!hasLocationPermission()) {
@@ -140,6 +170,16 @@ class LocationAlarmService : Service() {
         }
 
         try {
+            // 先清理旧的客户端（如果存在）
+            locationClient?.let {
+                try {
+                    it.stopLocation()
+                    it.onDestroy()
+                } catch (e: Exception) {
+                    Log.w(TAG, "清理旧定位客户端失败", e)
+                }
+            }
+
             // 初始化高德定位客户端
             locationClient = AMapLocationClient(applicationContext)
 
@@ -175,6 +215,7 @@ class LocationAlarmService : Service() {
 
             // 启动定位
             locationClient?.startLocation()
+            isLocationMonitoring = true
             Log.i(TAG, "高德位置监听已启动")
 
         } catch (e: Exception) {
@@ -185,6 +226,7 @@ class LocationAlarmService : Service() {
 
     /**
      * 检查当前位置是否在任一闹钟的触发范围内
+     * 支持多闹钟同时监测，支持重复提醒
      */
     private fun checkAlarms(currentLocation: Location) {
         serviceScope.launch {
@@ -205,9 +247,23 @@ class LocationAlarmService : Service() {
 
                 if (distance <= alarm.radius) {
                     activeCount++
-                    if (!alarm.triggered) {
-                        // 进入范围且尚未触发 → 触发闹钟
-                        triggerAlarm(alarm, distance, currentLocation)
+
+                    if (alarm.repeatInterval > 0) {
+                        // 重复提醒模式
+                        val now = System.currentTimeMillis()
+                        if (!alarm.triggered) {
+                            // 首次进入范围 → 触发
+                            triggerAlarm(alarm, distance, currentLocation)
+                        } else if (now - alarm.lastTriggeredAt >= alarm.repeatInterval) {
+                            // 已在范围内且达到重复间隔 → 再次触发
+                            triggerAlarm(alarm, distance, currentLocation)
+                        }
+                        // 未到间隔时间，不触发
+                    } else {
+                        // 单次提醒模式（原有逻辑）
+                        if (!alarm.triggered) {
+                            triggerAlarm(alarm, distance, currentLocation)
+                        }
                     }
                 } else {
                     // 不在范围内
@@ -231,8 +287,14 @@ class LocationAlarmService : Service() {
         val app = application as LocationAlarmApp
         val repository = app.repository
 
-        // 标记为已触发
-        repository.setTriggered(alarm.id, true)
+        val now = System.currentTimeMillis()
+
+        // 标记为已触发，并记录触发时间
+        if (alarm.repeatInterval > 0) {
+            repository.setTriggeredAndTime(alarm.id, true, now)
+        } else {
+            repository.setTriggered(alarm.id, true)
+        }
 
         // 发送通知
         notificationHelper.showAlarmNotification(
@@ -255,16 +317,20 @@ class LocationAlarmService : Service() {
             )
         )
 
-        Log.i(TAG, "闹钟触发: ${alarm.name}, 距离目标 ${distance.toInt()} 米")
+        Log.i(TAG, "闹钟触发: ${alarm.name}, 距离目标 ${distance.toInt()} 米, 重复间隔=${alarm.repeatInterval}ms")
     }
 
     /**
      * 更新前台服务通知
      */
     private fun updateServiceNotification(activeCount: Int) {
-        val notification = notificationHelper.buildServiceNotification(activeCount)
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(NotificationHelper.NOTIFICATION_ID_SERVICE, notification)
+        try {
+            val notification = notificationHelper.buildServiceNotification(activeCount)
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(NotificationHelper.NOTIFICATION_ID_SERVICE, notification)
+        } catch (e: Exception) {
+            Log.w(TAG, "更新服务通知失败", e)
+        }
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -284,6 +350,7 @@ class LocationAlarmService : Service() {
             Log.e(TAG, "停止定位客户端失败", e)
         }
         locationClient = null
+        isLocationMonitoring = false
         isRunning.value = false
         serviceScope.cancel()
         releaseWakeLock()
@@ -316,6 +383,7 @@ class LocationAlarmService : Service() {
             Log.e(TAG, "onDestroy 清理定位客户端失败", e)
         }
         locationClient = null
+        isLocationMonitoring = false
         isRunning.value = false
         serviceScope.cancel()
         releaseWakeLock()

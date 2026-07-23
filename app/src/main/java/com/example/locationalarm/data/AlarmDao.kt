@@ -33,6 +33,9 @@ interface AlarmDao {
     @Query("UPDATE alarms SET triggered = :triggered, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setTriggered(id: Long, triggered: Boolean, updatedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE alarms SET triggered = :triggered, lastTriggeredAt = :lastTriggeredAt, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setTriggeredAndTime(id: Long, triggered: Boolean, lastTriggeredAt: Long, updatedAt: Long = System.currentTimeMillis())
+
     @Query("SELECT DISTINCT tag FROM alarms WHERE tag != '' ORDER BY tag")
     fun getAllTags(): LiveData<List<String>>
 }

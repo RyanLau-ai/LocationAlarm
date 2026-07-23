@@ -18,6 +18,8 @@ import kotlinx.parcelize.Parcelize
  * @param enabled 是否启用
  * @param triggered 是否已触发（到达范围内后设为 true，离开后可重新触发）
  * @param tag 分类标签
+ * @param repeatInterval 重复提醒间隔（毫秒），0 表示仅提醒一次
+ * @param lastTriggeredAt 上次触发时间戳，用于重复提醒间隔判断
  * @param createdAt 创建时间戳
  * @param updatedAt 更新时间戳
  */
@@ -35,6 +37,8 @@ data class Alarm(
     val enabled: Boolean = true,
     val triggered: Boolean = false,
     val tag: String = "",
+    val repeatInterval: Long = 0L,
+    val lastTriggeredAt: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) : Parcelable
