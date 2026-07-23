@@ -35,6 +35,7 @@ import com.example.locationalarm.databinding.ActivityAddEditAlarmBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -427,7 +428,8 @@ class AddEditAlarmActivity : AppCompatActivity() {
                 selectedRepeatInterval = it.repeatInterval
 
                 // 设置重复提醒下拉
-                val matchIndex = REPEAT_OPTIONS.indexOfFirst { _, ms -> ms == it.repeatInterval }
+                val targetInterval = it.repeatInterval
+                val matchIndex = REPEAT_OPTIONS.indexOfFirst { option -> option.second == targetInterval }
                 if (matchIndex >= 0) {
                     binding.spinnerRepeat.setText(REPEAT_OPTIONS[matchIndex].first, false)
                 }
