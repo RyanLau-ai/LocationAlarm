@@ -2,10 +2,15 @@ package com.example.locationalarm.ui
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -145,6 +150,60 @@ class MainActivity : AppCompatActivity() {
             startForegroundService(serviceIntent)
         } else {
             startService(serviceIntent)
+        }
+
+        // 请求电池优化白名单 — 这是保活的关键
+        requestBatteryOptimizationExemption()
+    }
+
+    /**
+     * 请求将应用加入电池优化白名单
+     *
+     * 厂商 ROM (小米/华为/OPPO/vivo) 对后台服务有严格限制，
+     * 加入白名单后可以大幅降低被杀的概率。
+     */
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            val isIgnoring = powerManager.isIgnoringBatteryOptimizations(packageName)
+
+            if (!isIgnoring) {
+                // 弹出对话框解释为何需要电池优化白名单
+                AlertDialog.Builder(this)
+                    .setTitle("需要关闭电池优化")
+                    .setMessage(
+                        "为了确保位置闹钟在后台持续运行，需要将此应用加入" +
+                        "电池优化白名单。\n\n" +
+                        "如果您跳过此步骤，系统可能在后台杀死定位服务，" +
+                        "导致无法准时提醒。\n\n" +
+                        "点击「确定」前往设置页面，选择「不优化」。"
+                    )
+                    .setPositiveButton("确定") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // 某些 ROM 可能不支持此 intent，降级到电池优化列表页
+                            try {
+                                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                startActivity(intent)
+                            } catch (e2: Exception) {
+                                Toast.makeText(this, "请手动在系统设置中关闭电池优化", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton("稍后") { _, _ ->
+                        Toast.makeText(
+                            this,
+                            "未关闭电池优化可能导致后台服务被杀",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
         }
     }
 

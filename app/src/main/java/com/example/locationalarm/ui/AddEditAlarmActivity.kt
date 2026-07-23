@@ -119,30 +119,34 @@ class AddEditAlarmActivity : AppCompatActivity() {
     // ---- 地图初始化 ----
 
     private fun initMap(savedInstanceState: Bundle?) {
-        binding.mapView.onCreate(savedInstanceState)
-        aMap = binding.mapView.map
+        try {
+            binding.mapView.onCreate(savedInstanceState)
+            aMap = binding.mapView.map
 
-        // 地图设置
-        aMap.uiSettings.apply {
-            isZoomControlsEnabled = true
-            isMyLocationButtonEnabled = false // 用自定义 FAB
-            isScrollGesturesEnabled = true
-            isZoomGesturesEnabled = true
-        }
+            // 地图设置
+            aMap.uiSettings.apply {
+                isZoomControlsEnabled = true
+                isMyLocationButtonEnabled = false // 用自定义 FAB
+                isScrollGesturesEnabled = true
+                isZoomGesturesEnabled = true
+            }
 
-        // 默认视角：北京天安门
-        aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(39.9087, 116.3975), 12f))
+            // 默认视角：北京天安门
+            aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(39.9087, 116.3975), 12f))
 
-        // 请求定位权限
-        if (hasLocationPermission()) {
-            aMap.isMyLocationEnabled = true
-        } else {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+            // 请求定位权限
+            if (hasLocationPermission()) {
+                aMap.isMyLocationEnabled = true
+            } else {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
 
-        // 地图点击选点
-        aMap.setOnMapClickListener { latLng ->
-            selectLocation(latLng)
+            // 地图点击选点
+            aMap.setOnMapClickListener { latLng ->
+                selectLocation(latLng)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "地图初始化失败", e)
         }
     }
 
@@ -153,136 +157,169 @@ class AddEditAlarmActivity : AppCompatActivity() {
         selectedLatitude = latLng.latitude
         selectedLongitude = latLng.longitude
 
-        // 移动标记
-        currentMarker?.remove()
-        currentMarker = aMap.addMarker(
-            MarkerOptions()
-                .position(latLng)
-                .title("选中位置")
-        )
+        try {
+            // 移动标记
+            currentMarker?.remove()
+            currentMarker = aMap.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .title("选中位置")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "添加地图标记失败", e)
+        }
 
         runOnUiIfAlive {
             binding.tvSearchResult.text = "正在获取地址..."
         }
 
         // 反向地理编码
-        val query = RegeocodeQuery(
-            LatLonPoint(latLng.latitude, latLng.longitude),
-            200f, // 搜索半径（米）
-            GeocodeSearch.AMAP
-        )
-        geocodeSearch.getFromLocationAsyn(query)
+        try {
+            val query = RegeocodeQuery(
+                LatLonPoint(latLng.latitude, latLng.longitude),
+                200f, // 搜索半径（米）
+                GeocodeSearch.AMAP
+            )
+            geocodeSearch.getFromLocationAsyn(query)
+        } catch (e: Exception) {
+            Log.e(TAG, "反向地理编码请求失败", e)
+            runOnUiIfAlive {
+                binding.tvSearchResult.text = "获取地址失败，但位置已选中"
+            }
+        }
     }
 
     // ---- 地理编码初始化 ----
 
     private fun initGeocodeSearch() {
-        geocodeSearch = GeocodeSearch(this)
+        try {
+            geocodeSearch = GeocodeSearch(this)
 
-        // 正向地理编码回调（地址 -> 坐标）
-        geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
-            override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {
-                runOnUiIfAlive {
-                    val addressList = result?.geocodeAddressList
-                    if (addressList.isNullOrEmpty()) {
-                        binding.tvSearchResult.text = "未找到该地址，请尝试更详细的关键词"
-                        binding.btnSearchAddress.isEnabled = true
-                        return@runOnUiIfAlive
-                    }
+            // 正向地理编码回调（地址 -> 坐标）
+            geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
+                override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {
+                    runOnUiIfAlive {
+                        try {
+                            val addressList = result?.geocodeAddressList
+                            if (addressList.isNullOrEmpty()) {
+                                binding.tvSearchResult.text = "未找到该地址，请尝试更详细的关键词"
+                                binding.btnSearchAddress.isEnabled = true
+                                return@runOnUiIfAlive
+                            }
 
-                    val first = addressList[0]
-                    val latLng = LatLng(first.latLonPoint.latitude, first.latLonPoint.longitude)
-                    selectedLatitude = latLng.latitude
-                    selectedLongitude = latLng.longitude
-                    selectedAddress = first.formatAddress ?: first.adcode ?: ""
+                            val first = addressList[0]
+                            val latLng = LatLng(first.latLonPoint.latitude, first.latLonPoint.longitude)
+                            selectedLatitude = latLng.latitude
+                            selectedLongitude = latLng.longitude
+                            selectedAddress = first.formatAddress ?: first.adcode ?: ""
 
-                    // 移动地图到搜索结果
-                    aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                            // 移动地图到搜索结果
+                            aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
 
-                    // 添加标记
-                    currentMarker?.remove()
-                    currentMarker = aMap.addMarker(
-                        MarkerOptions().position(latLng).title(selectedAddress)
-                    )
+                            // 添加标记
+                            currentMarker?.remove()
+                            currentMarker = aMap.addMarker(
+                                MarkerOptions().position(latLng).title(selectedAddress)
+                            )
 
-                    binding.tvSearchResult.text = buildString {
-                        append("* ${selectedAddress}\n")
-                        append("纬度: ${"%.6f".format(selectedLatitude)}")
-                        append("  经度: ${"%.6f".format(selectedLongitude)}")
-                    }
-                    binding.btnSearchAddress.isEnabled = true
-                }
-            }
-
-            override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
-                runOnUiIfAlive {
-                    val addr: RegeocodeAddress? = result?.regeocodeAddress
-                    if (addr == null) {
-                        selectedAddress = "纬度 ${"%.6f".format(selectedLatitude)}, 经度 ${"%.6f".format(selectedLongitude)}"
-                    } else {
-                        // 安全拼接，逐字段判空
-                        val parts = mutableListOf<String>()
-                        addr.province?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
-                        addr.city?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
-                        addr.district?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
-                        selectedAddress = addr.formatAddress ?: parts.joinToString("")
-                    }
-
-                    binding.tvSearchResult.text = buildString {
-                        append("* ${selectedAddress}\n")
-                        append("纬度: ${"%.6f".format(selectedLatitude)}")
-                        append("  经度: ${"%.6f".format(selectedLongitude)}")
+                            binding.tvSearchResult.text = buildString {
+                                append("* ${selectedAddress}\n")
+                                append("纬度: ${"%.6f".format(selectedLatitude)}")
+                                append("  经度: ${"%.6f".format(selectedLongitude)}")
+                            }
+                            binding.btnSearchAddress.isEnabled = true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "正向地理编码回调处理失败", e)
+                            binding.btnSearchAddress.isEnabled = true
+                        }
                     }
                 }
-            }
-        })
+
+                override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
+                    runOnUiIfAlive {
+                        try {
+                            val addr: RegeocodeAddress? = result?.regeocodeAddress
+                            if (addr == null) {
+                                selectedAddress = "纬度 ${"%.6f".format(selectedLatitude)}, 经度 ${"%.6f".format(selectedLongitude)}"
+                            } else {
+                                // 安全拼接，逐字段判空
+                                val parts = mutableListOf<String>()
+                                addr.province?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                                addr.city?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                                addr.district?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+                                selectedAddress = addr.formatAddress ?: parts.joinToString("")
+                            }
+
+                            binding.tvSearchResult.text = buildString {
+                                append("* ${selectedAddress}\n")
+                                append("纬度: ${"%.6f".format(selectedLatitude)}")
+                                append("  经度: ${"%.6f".format(selectedLongitude)}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "反向地理编码回调处理失败", e)
+                            binding.tvSearchResult.text = "获取地址失败，但位置已选中"
+                        }
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "GeocodeSearch 初始化失败", e)
+        }
     }
 
     // ---- POI 联想搜索 ----
 
     private fun initPoiSuggestion() {
-        val autoComplete = binding.etAddress as AutoCompleteTextView
-        suggestionAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
-        autoComplete.setAdapter(suggestionAdapter)
-        autoComplete.threshold = 2
+        try {
+            val autoComplete = binding.etAddress as AutoCompleteTextView
+            suggestionAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
+            autoComplete.setAdapter(suggestionAdapter)
+            autoComplete.threshold = 2
 
-        // 点击联想项 -> 直接定位
-        autoComplete.setOnItemClickListener { parent, _, position, _ ->
-            if (position < poiSuggestions.size) {
-                val poi = poiSuggestions[position]
-                val latLng = LatLng(poi.latLonPoint.latitude, poi.latLonPoint.longitude)
-                selectedLatitude = latLng.latitude
-                selectedLongitude = latLng.longitude
-                selectedAddress = poi.title ?: poi.snippet ?: ""
+            // 点击联想项 -> 直接定位
+            autoComplete.setOnItemClickListener { parent, _, position, _ ->
+                try {
+                    if (position < poiSuggestions.size) {
+                        val poi = poiSuggestions[position]
+                        val latLng = LatLng(poi.latLonPoint.latitude, poi.latLonPoint.longitude)
+                        selectedLatitude = latLng.latitude
+                        selectedLongitude = latLng.longitude
+                        selectedAddress = poi.title ?: poi.snippet ?: ""
 
-                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-                currentMarker?.remove()
-                currentMarker = aMap.addMarker(
-                    MarkerOptions().position(latLng).title(selectedAddress)
-                )
+                        aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                        currentMarker?.remove()
+                        currentMarker = aMap.addMarker(
+                            MarkerOptions().position(latLng).title(selectedAddress)
+                        )
 
-                binding.tvSearchResult.text = buildString {
-                    append("* ${selectedAddress}\n")
-                    append("纬度: ${"%.6f".format(selectedLatitude)}")
-                    append("  经度: ${"%.6f".format(selectedLongitude)}")
+                        binding.tvSearchResult.text = buildString {
+                            append("* ${selectedAddress}\n")
+                            append("纬度: ${"%.6f".format(selectedLatitude)}")
+                            append("  经度: ${"%.6f".format(selectedLongitude)}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "POI 联想点击处理失败", e)
                 }
             }
+
+            // 输入文字变化 -> 防抖搜索 POI
+            autoComplete.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    val keyword = s?.toString()?.trim() ?: ""
+                    if (keyword.length >= 2) {
+                        searchPoiSuggestions(keyword)
+                    } else {
+                        poiSuggestions.clear()
+                        suggestionAdapter.clear()
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "POI 联想初始化失败", e)
         }
-
-        // 输入文字变化 -> 防抖搜索 POI
-        autoComplete.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val keyword = s?.toString()?.trim() ?: ""
-                if (keyword.length >= 2) {
-                    searchPoiSuggestions(keyword)
-                } else {
-                    poiSuggestions.clear()
-                    suggestionAdapter.clear()
-                }
-            }
-        })
     }
 
     /**
@@ -370,15 +407,19 @@ class AddEditAlarmActivity : AppCompatActivity() {
 
         binding.fabMyLocation.setOnClickListener {
             // 回到我的位置 - 使用高德定位
-            aMap.isMyLocationEnabled = true
-            // 移动到定位点
-            val myLoc = aMap.myLocation
-            if (myLoc != null) {
-                aMap.animateCamera(
-                    CameraUpdateFactory.newLatLngZoom(
-                        LatLng(myLoc.latitude, myLoc.longitude), 16f
+            try {
+                aMap.isMyLocationEnabled = true
+                // 移动到定位点
+                val myLoc = aMap.myLocation
+                if (myLoc != null) {
+                    aMap.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(myLoc.latitude, myLoc.longitude), 16f
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "定位到当前位置失败", e)
             }
         }
 
@@ -395,57 +436,67 @@ class AddEditAlarmActivity : AppCompatActivity() {
      * 正向地理编码搜索：地址文本 -> 坐标
      */
     private fun searchAddress(query: String) {
-        binding.btnSearchAddress.isEnabled = false
-        binding.tvSearchResult.text = "正在搜索..."
+        try {
+            binding.btnSearchAddress.isEnabled = false
+            binding.tvSearchResult.text = "正在搜索..."
 
-        val geocodeQuery = GeocodeQuery(query, "")
-        geocodeSearch.getFromLocationNameAsyn(geocodeQuery)
+            val geocodeQuery = GeocodeQuery(query, "")
+            geocodeSearch.getFromLocationNameAsyn(geocodeQuery)
 
-        // 恢复按钮（回调后会更新文本）
-        binding.btnSearchAddress.postDelayed({
-            if (!isFinishing && !isDestroyed) {
-                binding.btnSearchAddress.isEnabled = true
-            }
-        }, 1000)
+            // 恢复按钮（回调后会更新文本）
+            binding.btnSearchAddress.postDelayed({
+                if (!isFinishing && !isDestroyed) {
+                    binding.btnSearchAddress.isEnabled = true
+                }
+            }, 1000)
+        } catch (e: Exception) {
+            Log.e(TAG, "地址搜索请求失败", e)
+            binding.btnSearchAddress.isEnabled = true
+            binding.tvSearchResult.text = "搜索失败，请重试"
+        }
     }
 
     // ---- 编辑模式加载 ----
 
     private fun loadAlarmForEditing() {
         lifecycleScope.launch {
-            val alarm = (application as LocationAlarmApp).repository.getAlarmById(editingAlarmId)
-            alarm?.let {
-                if (isFinishing || isDestroyed) return@let
+            try {
+                val alarm = (application as LocationAlarmApp).repository.getAlarmById(editingAlarmId)
+                alarm?.let {
+                    if (isFinishing || isDestroyed) return@let
 
-                binding.etName.setText(it.name)
-                binding.etReminder.setText(it.reminder)
-                binding.etAddress.setText(it.address)
-                binding.etRadius.setText(it.radius.toString())
-                binding.etTag.setText(it.tag)
-                selectedLatitude = it.latitude
-                selectedLongitude = it.longitude
-                selectedAddress = it.address
-                selectedRepeatInterval = it.repeatInterval
+                    binding.etName.setText(it.name)
+                    binding.etReminder.setText(it.reminder)
+                    binding.etAddress.setText(it.address)
+                    binding.etRadius.setText(it.radius.toString())
+                    binding.etTag.setText(it.tag)
+                    selectedLatitude = it.latitude
+                    selectedLongitude = it.longitude
+                    selectedAddress = it.address
+                    selectedRepeatInterval = it.repeatInterval
 
-                // 设置重复提醒下拉
-                val targetInterval = it.repeatInterval
-                val matchIndex = REPEAT_OPTIONS.indexOfFirst { option -> option.second == targetInterval }
-                if (matchIndex >= 0) {
-                    binding.spinnerRepeat.setText(REPEAT_OPTIONS[matchIndex].first, false)
+                    // 设置重复提醒下拉
+                    val targetInterval = it.repeatInterval
+                    val matchIndex = REPEAT_OPTIONS.indexOfFirst { option -> option.second == targetInterval }
+                    if (matchIndex >= 0) {
+                        binding.spinnerRepeat.setText(REPEAT_OPTIONS[matchIndex].first, false)
+                    }
+
+                    // 地图移动到已存位置
+                    val latLng = LatLng(it.latitude, it.longitude)
+                    aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                    currentMarker = aMap.addMarker(
+                        MarkerOptions().position(latLng).title(it.address)
+                    )
+
+                    binding.tvSearchResult.text = buildString {
+                        append("* ${it.address}\n")
+                        append("纬度: ${"%.6f".format(it.latitude)}")
+                        append("  经度: ${"%.6f".format(it.longitude)}")
+                    }
                 }
-
-                // 地图移动到已存位置
-                val latLng = LatLng(it.latitude, it.longitude)
-                aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-                currentMarker = aMap.addMarker(
-                    MarkerOptions().position(latLng).title(it.address)
-                )
-
-                binding.tvSearchResult.text = buildString {
-                    append("* ${it.address}\n")
-                    append("纬度: ${"%.6f".format(it.latitude)}")
-                    append("  经度: ${"%.6f".format(it.longitude)}")
-                }
+            } catch (e: Exception) {
+                Log.e(TAG, "加载闹钟数据失败", e)
             }
         }
     }
@@ -525,24 +576,46 @@ class AddEditAlarmActivity : AppCompatActivity() {
     }
 
     // ---- MapView 生命周期 ----
+    // 关键：MapView 的生命周期方法必须在 super 之前调用
+    // 否则 Activity 已销毁，MapView 清理时会崩溃
 
     override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
         binding.mapView.onSaveInstanceState(outState)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
-        super.onResume()
         binding.mapView.onResume()
+        super.onResume()
     }
 
     override fun onPause() {
-        super.onPause()
         binding.mapView.onPause()
+        super.onPause()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        try {
+            binding.mapView.onLowMemory()
+        } catch (e: Exception) {
+            Log.e(TAG, "MapView onLowMemory 失败", e)
+        }
     }
 
     override fun onDestroy() {
+        try {
+            currentMarker?.destroy()
+            currentMarker = null
+        } catch (e: Exception) {
+            Log.e(TAG, "清理 Marker 失败", e)
+        }
+        try {
+            binding.mapView.onDestroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "MapView onDestroy 失败", e)
+        }
+        poiSearchJob?.cancel()
         super.onDestroy()
-        binding.mapView.onDestroy()
     }
 }

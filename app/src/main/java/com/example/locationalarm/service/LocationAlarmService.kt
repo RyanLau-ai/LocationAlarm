@@ -42,6 +42,7 @@ class LocationAlarmService : Service() {
 
         const val ACTION_START = "com.example.locationalarm.START_SERVICE"
         const val ACTION_STOP = "com.example.locationalarm.STOP_SERVICE"
+        const val ACTION_RESTART_SERVICE = "com.example.locationalarm.RESTART_SERVICE"
 
         // 定位间隔（毫秒）：30 秒
         private const val LOCATION_UPDATE_INTERVAL = 30_000L
@@ -90,20 +91,40 @@ class LocationAlarmService : Service() {
         Log.i(TAG, "onTaskRemoved - 服务可能被系统回收，尝试重启")
         val restartIntent = Intent(applicationContext, LocationAlarmService::class.java).apply {
             action = ACTION_START
+            // 防止 8.0+ 后台启动限制
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
         }
         val pendingIntent = android.app.PendingIntent.getService(
             this, 1, restartIntent,
             android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
         )
         val alarmManager = getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-        // 1 秒后重启服务，使用 setExactAndAllowWhileIdle 以在 Doze 下也能触发
+        // 1 秒后重启服务
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    android.os.SystemClock.elapsedRealtime() + 1000,
-                    pendingIntent
-                )
+                // Android 12+ (API 31) 需要 SCHEDULE_EXACT_ALARM 权限
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                            android.os.SystemClock.elapsedRealtime() + 1000,
+                            pendingIntent
+                        )
+                    } else {
+                        // 无精确闹钟权限，降级为非精确闹钟
+                        alarmManager.setAndAllowWhileIdle(
+                            android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                            android.os.SystemClock.elapsedRealtime() + 1000,
+                            pendingIntent
+                        )
+                    }
+                } else {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        android.os.SystemClock.elapsedRealtime() + 1000,
+                        pendingIntent
+                    )
+                }
             } else {
                 alarmManager.set(
                     android.app.AlarmManager.ELAPSED_REALTIME,
@@ -111,9 +132,28 @@ class LocationAlarmService : Service() {
                     pendingIntent
                 )
             }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "onTaskRemoved 精确闹钟权限被拒，降级为普通定时", e)
+            try {
+                alarmManager.set(
+                    android.app.AlarmManager.ELAPSED_REALTIME,
+                    android.os.SystemClock.elapsedRealtime() + 1000,
+                    pendingIntent
+                )
+            } catch (e2: Exception) {
+                Log.e(TAG, "onTaskRemoved 重启定时器完全失败", e2)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "onTaskRemoved 重启定时器失败", e)
         }
+
+        // 同时发送广播给 RestartReceiver
+        val restartBroadcast = Intent(applicationContext, RestartReceiver::class.java).apply {
+            action = ACTION_RESTART_SERVICE
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+        }
+        sendBroadcast(restartBroadcast)
+
         super.onTaskRemoved(rootIntent)
     }
 

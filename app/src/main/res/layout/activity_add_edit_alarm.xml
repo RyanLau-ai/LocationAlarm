@@ -63,7 +63,9 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionSearch"
                     android:inputType="text"
-                    android:completionThreshold="2" />
+                    android:completionThreshold="2"
+                    android:clickable="true"
+                    android:focusable="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
@@ -150,6 +152,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="none"
+                android:clickable="true"
+                android:focusable="true"
                 android:completionThreshold="0" />
         </com.google.android.material.textfield.TextInputLayout>
 
