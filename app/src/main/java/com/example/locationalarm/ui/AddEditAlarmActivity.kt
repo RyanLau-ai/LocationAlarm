@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.locationalarm.LocationAlarmApp
 import com.example.locationalarm.data.Alarm
 import com.example.locationalarm.databinding.ActivityAddEditAlarmBinding
+import com.example.locationalarm.util.AMapTileSource
 import com.example.locationalarm.util.NominatimHelper
 import com.example.locationalarm.util.SearchResult
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +118,7 @@ class AddEditAlarmActivity : AppCompatActivity() {
             Configuration.getInstance().load(this, getSharedPreferences("osmdroid", 0))
 
             mapView = binding.mapView
-            mapView.setTileSource(TileSourceFactory.MAPNIK)
+            mapView.setTileSource(AMapTileSource.ROAD_MAP)
             mapView.controller.setZoom(13.0)
 
             // Default center: Beijing

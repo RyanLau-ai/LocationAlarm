@@ -46,9 +46,13 @@ class LocationAlarmService : Service() {
         const val ACTION_STOP = "com.example.locationalarm.STOP_SERVICE"
         const val ACTION_RESTART_SERVICE = "com.example.locationalarm.RESTART_SERVICE"
 
-        // Location update interval: 30 seconds
-        private const val LOCATION_UPDATE_INTERVAL = 30_000L
+        // Location update interval: 10 seconds (faster for better repeat alarm responsiveness)
+        private const val LOCATION_UPDATE_INTERVAL = 10_000L
         private const val LOCATION_UPDATE_MIN_DISTANCE = 0f
+
+        // Buffer distance (meters) added to alarm radius for leave detection,
+        // prevents flapping when user is near the boundary
+        private const val LEAVE_BUFFER = 50f
 
         val isRunning = MutableStateFlow(false)
     }
@@ -294,11 +298,11 @@ class LocationAlarmService : Service() {
                                 triggerAlarm(alarm, distance, currentLocation)
                             }
                         }
-                    } else {
-                        if (alarm.triggered) {
-                            repository.setTriggered(alarm.id, false)
-                            notificationHelper.cancelAlarmNotification(alarm.id)
-                        }
+                    } else if (alarm.triggered && distance > alarm.radius + LEAVE_BUFFER) {
+                        // Only reset when user has moved beyond radius + buffer
+                        // This prevents rapid trigger/leave flapping near the boundary
+                        repository.setTriggered(alarm.id, false)
+                        notificationHelper.cancelAlarmNotification(alarm.id)
                     }
                 }
 
