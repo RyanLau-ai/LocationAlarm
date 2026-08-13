@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 应用图标前景：位置图钉 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 定位圆点 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,46 m-14,0 a14,14 0 1,1 28,0 a14,14 0 1,1 -28,0" />
+    <!-- 图钉形状 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,74 C54,74 36,58 36,46 A18,18 0 0,1 72,46 C72,58 54,74 54,74 Z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M54,70 C54,70 40,57 40,46 A14,14 0 0,1 68,46 C68,57 54,70 54,70 Z" />
+</vector>

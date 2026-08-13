@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 震动图标 -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M1,9h2v6H1V9zM5,7h2v10H5V7zM9,5h2v14H9V5zM13,4h2v16h-2V4zM17,7h2v10h-2V7zM21,9h2v6h-2V9z" />
+</vector>

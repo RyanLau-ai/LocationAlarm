@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">位置闹钟</string>
+
+    <!-- ==================== 主界面 ==================== -->
+    <string name="title_fences">我的围栏</string>
+    <string name="btn_add_fence">添加围栏</string>
+    <string name="empty_fences">暂无围栏\n点击右下角添加</string>
+    <string name="switch_track">轨迹记录</string>
+
+    <!-- ==================== 编辑界面 ==================== -->
+    <string name="title_new_fence">新建围栏</string>
+    <string name="title_edit_fence">编辑围栏</string>
+    <string name="label_fence_name">围栏名称</string>
+    <string name="hint_fence_name">例如：公司、家门口</string>
+    <string name="label_radius">围栏半径</string>
+    <string name="hint_radius">100</string>
+    <string name="unit_meter">米</string>
+    <string name="label_address">地址</string>
+    <string name="hint_address">在地图上点击选点或搜索</string>
+    <string name="label_in_alert">进入提醒</string>
+    <string name="label_out_alert">离开提醒</string>
+    <string name="label_alert_content">提醒内容</string>
+    <string name="hint_alert_content">到达/离开时收到的消息</string>
+    <string name="label_alert_way">提醒方式</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_delete">删除</string>
+    <string name="btn_choose_on_map">在地图上选点</string>
+
+    <!-- ==================== 提醒方式 ==================== -->
+    <string name="alert_vibrate">震动</string>
+    <string name="alert_ring">响铃</string>
+    <string name="alert_both">震动+响铃</string>
+    <string name="alert_silent">静默</string>
+
+    <!-- ==================== 搜索 ==================== -->
+    <string name="hint_search">搜索地点</string>
+
+    <!-- ==================== 地图选点 ==================== -->
+    <string name="map_tap_hint">点击地图选点</string>
+
+    <!-- ==================== 权限 ==================== -->
+    <string name="permission_location_title">定位权限</string>
+    <string name="permission_location_rationale">位置闹钟需要定位权限来检测您是否进入或离开围栏。\n\n请选择「始终允许」，确保后台围栏正常工作。</string>
+    <string name="permission_location_denied">定位权限被拒绝，后台围栏将无法工作</string>
+    <string name="permission_notification_title">通知权限</string>
+    <string name="permission_notification_rationale">需要通知权限来推送围栏触发提醒。</string>
+    <string name="permission_background_title">后台定位权限</string>
+    <string name="permission_background_rationale">Android 10+ 需要后台定位权限才能在后台持续监控围栏。</string>
+    <string name="permission_battery_title">电池优化白名单</string>
+    <string name="permission_battery_rationale">部分系统需要将应用加入电池优化白名单，否则可能被系统杀死。\n\n建议开启以确保围栏常驻生效。</string>
+    <string name="btn_grant_always">授予始终允许</string>
+    <string name="btn_grant">授予</string>
+    <string name="btn_skip">暂不</string>
+
+    <!-- ==================== 服务 ==================== -->
+    <string name="notification_channel_name_geo">地理围栏服务</string>
+    <string name="notification_channel_desc_geo">用于保持围栏监控常驻</string>
+    <string name="notification_channel_name_in">进入提醒</string>
+    <string name="notification_channel_desc_in">收到进入围栏通知时触发</string>
+    <string name="notification_channel_name_out">离开提醒</string>
+    <string name="notification_channel_desc_out">收到离开围栏通知时触发</string>
+    <string name="notification_channel_name_silent">静默提醒</string>
+    <string name="notification_channel_desc_silent">静默模式下的通知（无声无振动）</string>
+
+    <string name="notification_geo_title">位置闹钟运行中</string>
+    <string name="notification_geo_text">已监控 %d 个围栏</string>
+    <string name="notification_in_title">进入提醒</string>
+    <string name="notification_out_title">离开提醒</string>
+
+    <!-- ==================== 错误 ==================== -->
+    <string name="err_no_location">无法获取当前位置</string>
+    <string name="err_no_amap_key">高德 Key 未配置，地图功能不可用</string>
+    <string name="err_save_failed">保存失败</string>
+    <string name="err_name_required">请输入围栏名称</string>
+    <string name="err_radius_invalid">请输入有效的围栏半径</string>
+    <string name="err_location_not_set">请先选择地图位置</string>
+    <string name="err_no_alert_selected">请至少选择一种提醒方式</string>
+
+    <!-- ==================== 确认 ==================== -->
+    <string name="confirm_delete_title">删除围栏</string>
+    <string name="confirm_delete_message">确定要删除「%s」吗？</string>
+    <string name="confirm_yes">确定</string>
+    <string name="confirm_no">取消</string>
+
+    <!-- ==================== 地图 ==================== -->
+    <string name="location_my">我的位置</string>
+</resources>

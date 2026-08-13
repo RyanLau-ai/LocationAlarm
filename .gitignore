@@ -1,0 +1,10 @@
+# 忽略构建输出
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx

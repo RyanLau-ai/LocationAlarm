@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- 轨迹记录开关（自定义 actionView） -->
+    <item
+        android:id="@+id/action_track"
+        android:title="@string/switch_track"
+        app:actionLayout="@layout/menu_track_switch"
+        app:showAsAction="always" />
+
+</menu>
