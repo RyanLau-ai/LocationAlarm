@@ -14,8 +14,14 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // 从 local.properties 读取高德 Key（未配置时使用占位符，可编译但地图不可用）
-        val amapKey = providers.gradleProperty("AMAP_KEY").getOrElse("YOUR_AMAP_KEY_HERE")
+        // 从 local.properties 读取高德 Key（CI 会将 AMAP_KEY secret 写入此文件）
+        val props = java.util.Properties()
+        val lpFile = project.rootProject.file("local.properties")
+        if (lpFile.exists()) {
+            java.io.FileInputStream(lpFile).use { props.load(it) }
+        }
+        val amapKey = props.getProperty("AMAP_KEY")
+            ?: providers.gradleProperty("AMAP_KEY").getOrElse("YOUR_AMAP_KEY_HERE")
         buildConfigField("String", "AMAP_KEY", "\"$amapKey\"")
         manifestPlaceholders["AMAP_KEY"] = amapKey
     }
