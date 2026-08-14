@@ -57,6 +57,7 @@ jobs:
           STORE_PASSWORD=LocationAlarm123
           KEY_ALIAS=locationalarm
           KEY_PASSWORD=LocationAlarm123
+          AMAP_KEY=${{ secrets.AMAP_KEY }}
           EOF
 
       - name: Build Debug APK
