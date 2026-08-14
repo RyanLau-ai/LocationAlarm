@@ -24,6 +24,9 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
       # ── 固定签名：若 Secrets 有 KEYSTORE_BASE64 则使用，否则生成一个并作为 artifact 供下载保存 ──
       - name: Setup signing keystore
         run: |
