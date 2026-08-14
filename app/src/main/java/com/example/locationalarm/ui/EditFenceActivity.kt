@@ -32,9 +32,9 @@ import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.AMapException
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.geocoder.GeocodeSearch
+import com.amap.api.services.geocoder.GeocodeResult
 import com.amap.api.services.geocoder.RegeocodeAddress
 import com.amap.api.services.geocoder.RegeocodeQuery
-import com.amap.api.services.geocoder.RegeocodeResult
 import com.amap.api.services.help.Inputtips
 import com.amap.api.services.help.InputtipsQuery
 import com.amap.api.services.help.Tip
@@ -228,7 +228,7 @@ class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnC
         }
     }
 
-    override fun onRegeocodeSearched(result: RegeocodeResult?, code: Int) {
+    override fun onGeocodeSearched(result: GeocodeResult?, code: Int) {
         if (code == 1000 && result != null) {
             val address = result.regeocodeAddress
             selectedAddress = formatAddress(address)
@@ -243,8 +243,11 @@ class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnC
         sb.append(addr.city ?: "")
         sb.append(addr.district ?: "")
         sb.append(addr.township ?: "")
-        sb.append(addr.streetName ?: "")
-        sb.append(addr.streetNumber ?: "")
+        // 合并包中街道信息封装在 StreetNumber 对象中
+        addr.streetNumber?.let { sn ->
+            sb.append(sn.street ?: "")
+            sb.append(sn.number ?: "")
+        }
         return sb.toString().ifBlank { "未知地址" }
     }
 
