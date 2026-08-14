@@ -59,7 +59,7 @@ import com.google.android.material.snackbar.Snackbar
  * - 进入/离开提醒开关 + 提醒方式 + 提醒内容
  */
 class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnCameraChangeListener,
-    Inputtips.InputtipsListener, RegeocodeSearch.OnRegeocodeSearchListener {
+    Inputtips.InputtipsListener, GeocodeSearch.OnGeocodeSearchListener {
 
     companion object {
         private const val TAG = "EditFenceActivity"
@@ -91,7 +91,7 @@ class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnC
     private lateinit var suggestionAdapter: SuggestionAdapter
 
     // 逆地理编码
-    private var regeocodeSearch: RegeocodeSearch? = null
+    private var regeocodeSearch: GeocodeSearch? = null
 
     // 定位
     private var locationClient: AMapLocationClient? = null
@@ -213,8 +213,8 @@ class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnC
     private fun reverseGeocode(latLng: LatLng) {
         try {
             if (regeocodeSearch == null) {
-                regeocodeSearch = RegeocodeSearch(this).apply {
-                    setOnRegeocodeSearchListener(this@EditFenceActivity)
+                regeocodeSearch = GeocodeSearch(this).apply {
+                    setOnGeocodeSearchListener(this@EditFenceActivity)
                 }
             }
             val query = RegeocodeQuery(
