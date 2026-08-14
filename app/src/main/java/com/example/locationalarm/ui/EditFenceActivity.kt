@@ -35,6 +35,7 @@ import com.amap.api.services.geocoder.GeocodeSearch
 import com.amap.api.services.geocoder.GeocodeResult
 import com.amap.api.services.geocoder.RegeocodeAddress
 import com.amap.api.services.geocoder.RegeocodeQuery
+import com.amap.api.services.geocoder.RegeocodeResult
 import com.amap.api.services.help.Inputtips
 import com.amap.api.services.help.InputtipsQuery
 import com.amap.api.services.help.Tip
@@ -229,6 +230,10 @@ class EditFenceActivity : AppCompatActivity(), AMap.OnMapClickListener, AMap.OnC
     }
 
     override fun onGeocodeSearched(result: GeocodeResult?, code: Int) {
+        // 正向地理编码（当前未使用）
+    }
+
+    override fun onRegeocodeSearched(result: RegeocodeResult?, code: Int) {
         if (code == 1000 && result != null) {
             val address = result.regeocodeAddress
             selectedAddress = formatAddress(address)
