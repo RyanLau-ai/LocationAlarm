@@ -54,6 +54,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // 高德地图合并包：3dmap + search + location（避免分开引入导致的重复类冲突）
-    implementation("com.amap.api:3dmap-location-search:latest.integration")
+    // 高德地图合并包：3dmap + location + search（固定版本避免 latest.integration 漂移；11.1.200 含 search 9.7.4，RegeocodeSearch 可用）
+    implementation("com.amap.api:3dmap-location-search:11.1.200_loc11.1.200_sea9.7.4")
 }
