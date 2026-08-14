@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -15,10 +18,10 @@ android {
         versionName = "1.0"
 
         // 从 local.properties 读取高德 Key（CI 会将 AMAP_KEY secret 写入此文件）
-        val props = java.util.Properties()
+        val props = Properties()
         val lpFile = project.rootProject.file("local.properties")
         if (lpFile.exists()) {
-            java.io.FileInputStream(lpFile).use { props.load(it) }
+            FileInputStream(lpFile).use { props.load(it) }
         }
         val amapKey = props.getProperty("AMAP_KEY")
             ?: providers.gradleProperty("AMAP_KEY").getOrElse("YOUR_AMAP_KEY_HERE")
